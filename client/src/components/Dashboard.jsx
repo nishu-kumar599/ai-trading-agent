@@ -202,7 +202,7 @@ export const Dashboard = () => {
               title={isSidebarCollapsed ? "Expand Sidebar (Show full menu)" : "Close Sidebar (Icon-only mode)"}
               onMouseEnter={(e) => {
                 e.currentTarget.style.color = '#fff';
-                e.currentTarget.style.borderColor = 'rgba(249, 115, 22, 0.4)';
+                e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.4)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.color = 'var(--text-muted)';
@@ -214,9 +214,9 @@ export const Dashboard = () => {
             </button>
 
             <span style={{
-              background: 'rgba(249, 115, 22, 0.12)',
-              color: 'var(--accent-orange)',
-              border: '1px solid rgba(249, 115, 22, 0.3)',
+              background: 'rgba(16, 185, 129, 0.12)',
+              color: 'var(--accent-emerald)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
               padding: '4px 12px',
               borderRadius: '6px',
               fontSize: '0.75rem',
@@ -225,7 +225,7 @@ export const Dashboard = () => {
               alignItems: 'center',
               gap: '6px'
             }}>
-              <span className="pulse-dot" style={{ background: '#f97316' }}></span>
+              <span className="pulse-dot" style={{ background: '#10b981' }}></span>
               Live Algorithmic Execution Core
             </span>
             <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
@@ -238,9 +238,9 @@ export const Dashboard = () => {
             <button
               onClick={() => setIsCalculatorOpen(true)}
               style={{
-                background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.15) 0%, rgba(234, 88, 12, 0.08) 100%)',
-                border: '1px solid rgba(249, 115, 22, 0.35)',
-                color: 'var(--accent-orange)',
+                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.08) 100%)',
+                border: '1px solid rgba(16, 185, 129, 0.35)',
+                color: 'var(--accent-emerald)',
                 padding: '7px 14px',
                 borderRadius: '8px',
                 fontSize: '0.8rem',
@@ -295,8 +295,8 @@ export const Dashboard = () => {
         <main className="dashboard-content" style={{ margin: '20px auto', maxWidth: '1320px', padding: '0 20px', width: '100%' }}>
           {/* Interactive Ready-to-Use Testing Mode Sandbox Bar */}
           <div style={{
-            background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.09) 0%, rgba(17, 17, 22, 0.98) 100%)',
-            border: '1px solid rgba(249, 115, 22, 0.3)',
+            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(17, 22, 34, 0.98) 100%)',
+            border: '1px solid rgba(16, 185, 129, 0.25)',
             borderRadius: '14px',
             padding: '16px 22px',
             marginBottom: '18px',
@@ -311,12 +311,12 @@ export const Dashboard = () => {
                 width: '38px',
                 height: '38px',
                 borderRadius: '8px',
-                background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#fff',
-                boxShadow: '0 2px 10px rgba(249, 115, 22, 0.4)'
+                color: '#051610',
+                boxShadow: '0 2px 10px rgba(16, 185, 129, 0.3)'
               }}>
                 <Zap size={20} />
               </div>
@@ -326,9 +326,9 @@ export const Dashboard = () => {
                     TESTING MODE ACTIVE (PAPER TRADING SANDBOX)
                   </span>
                   <span style={{
-                    background: 'rgba(249, 115, 22, 0.15)',
-                    color: 'var(--accent-orange)',
-                    border: '1px solid rgba(249, 115, 22, 0.3)',
+                    background: 'rgba(16, 185, 129, 0.15)',
+                    color: 'var(--accent-emerald)',
+                    border: '1px solid rgba(16, 185, 129, 0.3)',
                     fontSize: '0.68rem',
                     padding: '2px 8px',
                     borderRadius: '6px',
@@ -363,7 +363,7 @@ export const Dashboard = () => {
                   transition: 'all 0.2s ease'
                 }}
               >
-                <TrendingUp size={13} color="var(--accent-orange)" />
+                <TrendingUp size={13} color="var(--accent-emerald)" />
                 Test Buy Reliance (Intraday)
               </button>
 
@@ -385,7 +385,7 @@ export const Dashboard = () => {
                   transition: 'all 0.2s ease'
                 }}
               >
-                <Layers size={13} color="#fb923c" />
+                <Layers size={13} color="var(--accent-cyan)" />
                 Test Buy Nifty 24500 CE
               </button>
 
@@ -393,9 +393,9 @@ export const Dashboard = () => {
                 onClick={handleSimulateSurge}
                 disabled={isTestingAction}
                 style={{
-                  background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.18) 0%, rgba(234, 88, 12, 0.1) 100%)',
-                  border: '1px solid rgba(249, 115, 22, 0.4)',
-                  color: 'var(--accent-orange)',
+                  background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.18) 0%, rgba(5, 150, 105, 0.1) 100%)',
+                  border: '1px solid rgba(16, 185, 129, 0.4)',
+                  color: 'var(--accent-emerald)',
                   padding: '8px 12px',
                   borderRadius: '8px',
                   fontSize: '0.76rem',
@@ -438,9 +438,9 @@ export const Dashboard = () => {
           {/* Interactive Test Action Toast Notification */}
           {testMessage && (
             <div style={{
-              background: testMessage.type === 'error' ? 'rgba(239, 68, 68, 0.12)' : 'rgba(249, 115, 22, 0.15)',
-              border: `1px solid ${testMessage.type === 'error' ? 'rgba(239, 68, 68, 0.35)' : 'rgba(249, 115, 22, 0.4)'}`,
-              color: testMessage.type === 'error' ? 'var(--danger)' : '#fb923c',
+              background: testMessage.type === 'error' ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.15)',
+              border: `1px solid ${testMessage.type === 'error' ? 'rgba(239, 68, 68, 0.35)' : 'rgba(16, 185, 129, 0.4)'}`,
+              color: testMessage.type === 'error' ? 'var(--danger)' : 'var(--accent-emerald)',
               borderRadius: '10px',
               padding: '12px 18px',
               marginBottom: '18px',
@@ -468,7 +468,7 @@ export const Dashboard = () => {
             <div className="stat-card">
               <div className="stat-card-title">
                 <span>Account Capital</span>
-                <BarChart2 size={16} color="var(--accent-orange)" />
+                <BarChart2 size={16} color="var(--accent-cyan)" />
               </div>
               <div className="stat-card-value">₹{testBalance.toLocaleString()}</div>
               <div className="stat-card-tag stat-tag-positive">
@@ -494,12 +494,12 @@ export const Dashboard = () => {
             <div className="stat-card">
               <div className="stat-card-title">
                 <span>Today's Live Audit P&L</span>
-                <ShieldCheck size={16} color="var(--accent-orange)" />
+                <ShieldCheck size={16} color="var(--accent-emerald)" />
               </div>
-              <div className="stat-card-value" style={{ color: 'var(--accent-orange)' }}>
+              <div className="stat-card-value" style={{ color: 'var(--accent-emerald)' }}>
                 +₹16,720.00
               </div>
-              <div className="stat-card-tag" style={{ color: '#fb923c' }}>
+              <div className="stat-card-tag" style={{ color: 'var(--accent-emerald)' }}>
                 <CheckCircle2 size={14} />
                 100% Zero-Loss Compliance
               </div>
@@ -508,7 +508,7 @@ export const Dashboard = () => {
             <div className="stat-card">
               <div className="stat-card-title">
                 <span>Production Verdict</span>
-                <Award size={16} color="#fb923c" />
+                <Award size={16} color="var(--accent-emerald)" />
               </div>
               <div className="stat-card-value" style={{ fontSize: '1.25rem', color: 'var(--accent-emerald)' }}>
                 Grade A+ Ready

@@ -45,7 +45,7 @@ export const MarketTickerTape = ({ onSelectTicker }) => {
     <div style={{
       width: '100%',
       height: '38px',
-      background: '#070709',
+      background: 'rgba(11, 16, 28, 0.98)',
       borderBottom: '1px solid var(--border-subtle)',
       display: 'flex',
       alignItems: 'center',
@@ -55,7 +55,7 @@ export const MarketTickerTape = ({ onSelectTicker }) => {
     }}>
       {/* Live Badge Left Anchor */}
       <div style={{
-        background: '#070709',
+        background: 'rgba(11, 16, 28, 0.98)',
         height: '100%',
         padding: '0 14px',
         display: 'flex',
@@ -69,14 +69,14 @@ export const MarketTickerTape = ({ onSelectTicker }) => {
           width: '7px',
           height: '7px',
           borderRadius: '50%',
-          background: '#f97316',
-          boxShadow: '0 0 8px #f97316',
+          background: 'var(--accent-emerald)',
+          boxShadow: '0 0 8px var(--accent-emerald)',
           display: 'inline-block'
         }}></span>
         <span style={{
           fontSize: '0.68rem',
           fontWeight: 800,
-          color: '#f97316',
+          color: 'var(--accent-emerald)',
           letterSpacing: '0.6px',
           textTransform: 'uppercase'
         }}>
@@ -114,7 +114,7 @@ export const MarketTickerTape = ({ onSelectTicker }) => {
           >
             <span style={{
               fontWeight: 700,
-              color: item.isIndex ? '#fb923c' : '#f8fafc',
+              color: item.isIndex ? '#38bdf8' : '#f8fafc',
               fontFamily: 'var(--font-main)'
             }}>
               {item.symbol}

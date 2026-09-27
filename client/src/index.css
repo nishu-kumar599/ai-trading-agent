@@ -1,16 +1,13 @@
 :root {
-  --bg-main: #09090b;
-  --bg-card: #111116;
-  --bg-card-hover: #181820;
-  --bg-input: #0d0d12;
-  --border-subtle: #22222e;
-  --border-focus: #f97316;
+  --bg-main: #0b0e14;
+  --bg-card: #111622;
+  --bg-card-hover: #161d2e;
+  --bg-input: #0e131e;
+  --border-subtle: #1e2638;
+  --border-focus: #10b981;
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
   --text-dim: #64748b;
-  --accent-orange: #f97316;
-  --accent-orange-glow: rgba(249, 115, 22, 0.25);
-  --accent-orange-dark: #ea580c;
   --accent-emerald: #10b981;
   --accent-emerald-glow: rgba(16, 185, 129, 0.2);
   --accent-cyan: #38bdf8;
@@ -34,14 +31,14 @@
   height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #09090b;
+  background: #0b0e14;
 }
 ::-webkit-scrollbar-thumb {
-  background: #22222e;
+  background: #1e2638;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #f97316;
+  background: #10b981;
 }
 
 body {
@@ -80,7 +77,7 @@ body {
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
   border-radius: 12px;
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
 }
 
 /* Brand Logo */
@@ -96,12 +93,11 @@ body {
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  background: #10b981;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
-  box-shadow: 0 2px 10px rgba(249, 115, 22, 0.35);
+  color: #0b0e14;
 }
 
 .brand-title {
@@ -114,7 +110,7 @@ body {
 }
 
 .brand-title span {
-  color: #f97316;
+  color: #10b981;
 }
 
 /* Auth Layout */
@@ -431,8 +427,8 @@ body {
   padding: 13px;
   border: none;
   border-radius: 10px;
-  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
-  color: #ffffff;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #051610;
   font-weight: 700;
   font-size: 0.95rem;
   cursor: pointer;
@@ -441,13 +437,13 @@ body {
   justify-content: center;
   gap: 8px;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 14px rgba(249, 115, 22, 0.35);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
 }
 
 .btn-primary:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(249, 115, 22, 0.5);
-  background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
+  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
 }
 
 .btn-primary:disabled {

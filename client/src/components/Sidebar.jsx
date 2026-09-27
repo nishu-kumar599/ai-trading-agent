@@ -136,8 +136,8 @@ export const Sidebar = ({
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.color = '#fff';
-              e.currentTarget.style.borderColor = 'rgba(249, 115, 22, 0.4)';
-              e.currentTarget.style.background = 'rgba(249, 115, 22, 0.1)';
+              e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+              e.currentTarget.style.background = 'rgba(16, 185, 129, 0.1)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.color = 'var(--text-muted)';
@@ -184,8 +184,8 @@ export const Sidebar = ({
                         padding: isCollapsed ? '10px 0' : '10px 12px',
                         borderRadius: '10px',
                         border: '1px solid',
-                        borderColor: isActive ? 'rgba(249, 115, 22, 0.4)' : 'transparent',
-                        background: isActive ? 'rgba(249, 115, 22, 0.12)' : 'transparent',
+                        borderColor: isActive ? 'rgba(16, 185, 129, 0.4)' : 'transparent',
+                        background: isActive ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
                         color: isActive ? '#fff' : 'var(--text-muted)',
                         cursor: 'pointer',
                         fontSize: '0.84rem',
@@ -195,7 +195,7 @@ export const Sidebar = ({
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <Icon size={18} color={isActive ? 'var(--accent-orange)' : '#94a3b8'} />
+                        <Icon size={18} color={isActive ? 'var(--accent-emerald)' : '#94a3b8'} />
                         {!isCollapsed && <span>{item.label}</span>}
                       </div>
                       {!isCollapsed && (
@@ -203,8 +203,8 @@ export const Sidebar = ({
                           fontSize: '0.68rem',
                           padding: '2px 6px',
                           borderRadius: '6px',
-                          background: isActive ? 'rgba(249, 115, 22, 0.25)' : 'rgba(255, 255, 255, 0.04)',
-                          color: isActive ? 'var(--accent-orange)' : 'var(--text-dim)',
+                          background: isActive ? 'rgba(16, 185, 129, 0.22)' : 'rgba(255, 255, 255, 0.04)',
+                          color: isActive ? 'var(--accent-emerald)' : 'var(--text-dim)',
                           fontWeight: 600
                         }}>
                           {item.badge}
@@ -230,8 +230,8 @@ export const Sidebar = ({
         {/* Bot Quick Pulse Chip */}
         {!isCollapsed ? (
           <div style={{
-            background: 'rgba(249, 115, 22, 0.08)',
-            border: '1px solid rgba(249, 115, 22, 0.25)',
+            background: 'rgba(16, 185, 129, 0.08)',
+            border: '1px solid rgba(16, 185, 129, 0.25)',
             padding: '8px 12px',
             borderRadius: '8px',
             display: 'flex',
@@ -239,7 +239,7 @@ export const Sidebar = ({
             justifyContent: 'space-between',
             fontSize: '0.75rem'
           }}>
-            <span style={{ color: 'var(--accent-orange)', fontWeight: 600 }}>● Models Active</span>
+            <span style={{ color: 'var(--accent-emerald)', fontWeight: 600 }}>● Models Active</span>
             <span style={{ color: '#fff', fontFamily: 'var(--font-mono)' }}>+16.72% Today</span>
           </div>
         ) : (
@@ -249,10 +249,10 @@ export const Sidebar = ({
               display: 'flex', 
               justifyContent: 'center', 
               padding: '6px 0',
-              color: 'var(--accent-orange)' 
+              color: 'var(--accent-emerald)' 
             }}
           >
-            <span className="pulse-dot" style={{ background: '#f97316' }}></span>
+            <span className="pulse-dot" style={{ background: '#10b981' }}></span>
           </div>
         )}
 
@@ -263,9 +263,9 @@ export const Sidebar = ({
           title="Risk & Lot Calculator"
           style={{
             width: '100%',
-            background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.15) 0%, rgba(234, 88, 12, 0.08) 100%)',
-            border: '1px solid rgba(249, 115, 22, 0.35)',
-            color: 'var(--accent-orange)',
+            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.08) 100%)',
+            border: '1px solid rgba(16, 185, 129, 0.35)',
+            color: 'var(--accent-emerald)',
             padding: isCollapsed ? '10px 0' : '8px 12px',
             borderRadius: '8px',
             fontSize: '0.78rem',
@@ -291,7 +291,7 @@ export const Sidebar = ({
           gap: isCollapsed ? '8px' : '0'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }} title={user?.email || 'demo@aitrading.com'}>
-            <div className="user-avatar" style={{ width: '32px', height: '32px', background: '#f97316', color: '#fff' }}>
+            <div className="user-avatar" style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#051610' }}>
               {getInitials(user?.name)}
             </div>
             {!isCollapsed && (

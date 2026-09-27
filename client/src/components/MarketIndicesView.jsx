@@ -217,8 +217,8 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Title & Status Banner */}
       <div style={{
-        background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.1) 0%, rgba(17, 17, 22, 0.95) 100%)',
-        border: '1px solid rgba(249, 115, 22, 0.3)',
+        background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(17, 22, 34, 0.95) 100%)',
+        border: '1px solid rgba(16, 185, 129, 0.25)',
         borderRadius: '16px',
         padding: '22px 26px',
         display: 'flex',
@@ -230,9 +230,9 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
             <span style={{
-              background: 'rgba(249, 115, 22, 0.15)',
-              color: 'var(--accent-orange)',
-              border: '1px solid rgba(249, 115, 22, 0.3)',
+              background: 'rgba(16, 185, 129, 0.15)',
+              color: 'var(--accent-emerald)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
               padding: '3px 10px',
               borderRadius: '6px',
               fontSize: '0.75rem',
@@ -272,9 +272,9 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
           <button
             onClick={handleRefresh}
             style={{
-              background: 'rgba(249, 115, 22, 0.12)',
-              border: '1px solid rgba(249, 115, 22, 0.3)',
-              color: 'var(--accent-orange)',
+              background: 'rgba(16, 185, 129, 0.1)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              color: 'var(--accent-emerald)',
               padding: '8px 14px',
               borderRadius: '8px',
               cursor: 'pointer',
@@ -316,7 +316,7 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
             >
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#fb923c', letterSpacing: '0.4px' }}>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#38bdf8', letterSpacing: '0.4px' }}>
                     {idx.name}
                   </span>
                   <span style={{
@@ -371,7 +371,7 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
                   <div style={{
                     width: `${rangePct}%`,
                     height: '100%',
-                    background: 'linear-gradient(90deg, #f97316, #10b981)',
+                    background: 'linear-gradient(90deg, #ef4444, #10b981)',
                     borderRadius: '3px'
                   }}></div>
                 </div>
@@ -434,9 +434,9 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
 
           <span style={{
             fontSize: '0.74rem',
-            color: 'var(--accent-orange)',
-            background: 'rgba(249, 115, 22, 0.1)',
-            border: '1px solid rgba(249, 115, 22, 0.25)',
+            color: 'var(--accent-emerald)',
+            background: 'rgba(16, 185, 129, 0.1)',
+            border: '1px solid rgba(16, 185, 129, 0.25)',
             padding: '4px 10px',
             borderRadius: '6px',
             fontWeight: 700
@@ -503,7 +503,7 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
                       <div style={{
                         width: `${Math.min(100, Math.max(0, ((stk.price - stk.dayLow) / (stk.dayHigh - stk.dayLow)) * 100))}%`,
                         height: '100%',
-                        background: '#f97316',
+                        background: 'var(--accent-emerald)',
                         borderRadius: '2px'
                       }}></div>
                     </div>
@@ -513,11 +513,11 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
                     <span style={{
                       fontSize: '0.68rem',
                       fontWeight: 700,
-                      background: 'rgba(249, 115, 22, 0.12)',
-                      color: '#fb923c',
+                      background: 'rgba(16, 185, 129, 0.12)',
+                      color: 'var(--accent-emerald)',
                       padding: '3px 8px',
                       borderRadius: '4px',
-                      border: '1px solid rgba(249, 115, 22, 0.25)'
+                      border: '1px solid rgba(16, 185, 129, 0.25)'
                     }}>
                       {stk.trend}
                     </span>
@@ -527,8 +527,8 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
                     <button
                       onClick={() => onExecuteQuickTrade && onExecuteQuickTrade(stk)}
                       style={{
-                        background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-                        color: '#fff',
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        color: '#051610',
                         border: 'none',
                         padding: '6px 14px',
                         borderRadius: '6px',
@@ -538,7 +538,7 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '4px',
-                        boxShadow: '0 2px 8px rgba(249, 115, 22, 0.35)'
+                        boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
                       }}
                     >
                       <Zap size={12} />

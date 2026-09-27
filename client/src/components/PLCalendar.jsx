@@ -54,8 +54,8 @@ export const PLCalendar = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Month Performance & Title Banner */}
       <div style={{
-        background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.1) 0%, rgba(17, 17, 22, 0.95) 100%)',
-        border: '1px solid rgba(249, 115, 22, 0.3)',
+        background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(17, 22, 34, 0.95) 100%)',
+        border: '1px solid rgba(16, 185, 129, 0.25)',
         borderRadius: '16px',
         padding: '22px 26px',
         display: 'flex',
@@ -67,9 +67,9 @@ export const PLCalendar = () => {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
             <span style={{
-              background: 'rgba(249, 115, 22, 0.15)',
-              color: 'var(--accent-orange)',
-              border: '1px solid rgba(249, 115, 22, 0.3)',
+              background: 'rgba(16, 185, 129, 0.12)',
+              color: 'var(--accent-emerald)',
+              border: '1px solid rgba(16, 185, 129, 0.25)',
               padding: '3px 10px',
               borderRadius: '6px',
               fontSize: '0.75rem',
