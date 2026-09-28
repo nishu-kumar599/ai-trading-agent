@@ -22,8 +22,9 @@ export const MarketSentimentView = () => {
     setLoading(true);
     try {
       const res = await fetch('/api/sentiment/market');
-      const data = await res.json();
-      if (data.success) {
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : null;
+      if (data && data.success) {
         setSentiment(data.data);
       }
     } catch (err) {

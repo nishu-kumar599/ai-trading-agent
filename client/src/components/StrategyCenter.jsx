@@ -55,8 +55,9 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
     setLoading(true);
     try {
       const res = await fetch(`/api/strategies/scan?horizon=${horizon}`);
-      const data = await res.json();
-      if (data.success) {
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : null;
+      if (data && data.success) {
         setScanData(data);
       }
     } catch (err) {
@@ -70,8 +71,9 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
   const fetchPositions = async () => {
     try {
       const res = await fetch('/api/strategies/positions');
-      const data = await res.json();
-      if (data.success) {
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : null;
+      if (data && data.success) {
         setActivePositions(data.activePositions || []);
         setTradeHistory(data.tradeHistory || []);
       }
@@ -105,9 +107,10 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      const data = await res.json();
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : null;
 
-      if (data.success) {
+      if (data && data.success) {
         setExecutionNotice(`Order Executed: ${data.trade.symbol} (${data.trade.direction}) @ ₹${data.trade.entryPrice} with Profit-Lock Guard!`);
         fetchPositions();
         setSelectedStockToTrade(null);
@@ -132,8 +135,9 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ newPrice: simulatedPrice })
       });
-      const data = await res.json();
-      if (data.success) {
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : null;
+      if (data && data.success) {
         fetchPositions();
       }
     } catch (err) {
@@ -147,8 +151,9 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
       const res = await fetch(`/api/strategies/positions/${positionId}/close`, {
         method: 'POST'
       });
-      const data = await res.json();
-      if (data.success) {
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : null;
+      if (data && data.success) {
         fetchPositions();
       }
     } catch (err) {

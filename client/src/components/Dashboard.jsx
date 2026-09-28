@@ -46,8 +46,9 @@ export const Dashboard = () => {
     setIsRefreshing(true);
     try {
       const res = await fetch('/api/agent/overview');
-      const data = await res.json();
-      setAgentData(data);
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : null;
+      if (data) setAgentData(data);
     } catch (err) {
       console.error('Failed to fetch agent status:', err);
     } finally {
@@ -90,13 +91,16 @@ export const Dashboard = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      const data = await res.json();
-      if (data.success) {
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : null;
+      if (data && data.success) {
         setTestMessage({
           type: 'success',
           text: `Test Paper Order Placed! ${payload.direction} ${payload.quantity} ${payload.symbol} @ ₹${payload.price}. Stop-Loss & Profit-Lock initialized.`
         });
         setActiveMainTab('positions');
+      } else {
+        setTestMessage({ type: 'error', text: data?.message || 'Failed to place test order' });
       }
     } catch (err) {
       setTestMessage({ type: 'error', text: 'Failed to place test order: ' + err.message });
@@ -109,8 +113,9 @@ export const Dashboard = () => {
     setIsTestingAction(true);
     try {
       const posRes = await fetch('/api/strategies/positions');
-      const posData = await posRes.json();
-      if (posData.activePositions && posData.activePositions.length > 0) {
+      const posText = await posRes.text();
+      const posData = posText ? JSON.parse(posText) : null;
+      if (posData && posData.activePositions && posData.activePositions.length > 0) {
         const targetPos = posData.activePositions[0];
         const newPrice = +(targetPos.entryPrice * 1.018).toFixed(2);
         const tickRes = await fetch(`/api/strategies/positions/${targetPos.id}/tick`, {
@@ -118,10 +123,11 @@ export const Dashboard = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ newPrice })
         });
-        const tickData = await tickRes.json();
+        const tickText = await tickRes.text();
+        const tickData = tickText ? JSON.parse(tickText) : null;
         setTestMessage({
           type: 'success',
-          text: `📈 Simulated +1.8% Surge on ${targetPos.symbol} to ₹${newPrice}! Stop-Loss ratcheted to ₹${tickData.position.stopLoss} (Guaranteed Zero-Loss Locked).`
+          text: `📈 Simulated +1.8% Surge on ${targetPos.symbol} to ₹${newPrice}! Stop-Loss ratcheted to ₹${tickData?.position?.stopLoss || newPrice} (Guaranteed Zero-Loss Locked).`
         });
         setActiveMainTab('positions');
       } else {

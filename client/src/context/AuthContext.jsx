@@ -27,8 +27,10 @@ export const AuthProvider = ({ children }) => {
           }
         });
 
-        const data = await response.json();
-        if (response.ok && data.success) {
+        const text = await response.text();
+        const data = text ? JSON.parse(text) : null;
+
+        if (response.ok && data?.success) {
           setUser(data.user);
           setToken(storedToken);
         } else {
@@ -60,10 +62,16 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({ email, password })
       });
 
-      const data = await response.json();
+      const text = await response.text();
+      let data = null;
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch (e) {
+        data = null;
+      }
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Invalid email or password.');
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || 'Server returned an invalid response. Please check server connection.');
       }
 
       localStorage.setItem('aitrader_token', data.token);
@@ -88,10 +96,16 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({ name, email, password })
       });
 
-      const data = await response.json();
+      const text = await response.text();
+      let data = null;
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch (e) {
+        data = null;
+      }
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Registration failed.');
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || 'Registration failed. Please try again.');
       }
 
       localStorage.setItem('aitrader_token', data.token);

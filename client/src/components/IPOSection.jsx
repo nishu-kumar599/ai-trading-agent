@@ -50,8 +50,9 @@ export const IPOSection = ({ onExecutePaperTrade }) => {
       setLoading(true);
       const url = `/api/ipo/list?status=${statusFilter === 'MY_BIDS' ? 'ALL' : statusFilter}&category=${categoryFilter}`;
       const res = await fetch(url);
-      const data = await res.json();
-      if (data.success) {
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : null;
+      if (data && data.success) {
         setIpos(data.ipos || []);
         setStats(data.stats || null);
       }
@@ -65,8 +66,9 @@ export const IPOSection = ({ onExecutePaperTrade }) => {
   const fetchMyBids = async () => {
     try {
       const res = await fetch('/api/ipo/my-bids');
-      const data = await res.json();
-      if (data.success) {
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : null;
+      if (data && data.success) {
         setMyBids(data.bids || []);
       }
     } catch (err) {
@@ -95,8 +97,9 @@ export const IPOSection = ({ onExecutePaperTrade }) => {
           upiId
         })
       });
-      const data = await res.json();
-      if (data.success) {
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : null;
+      if (data && data.success) {
         setActionMessage({
           type: 'success',
           text: data.message
@@ -107,7 +110,7 @@ export const IPOSection = ({ onExecutePaperTrade }) => {
       } else {
         setActionMessage({
           type: 'error',
-          text: data.error || 'Failed to submit bid'
+          text: data?.error || 'Failed to submit bid'
         });
       }
     } catch (err) {
@@ -125,8 +128,9 @@ export const IPOSection = ({ onExecutePaperTrade }) => {
       const res = await fetch(`/api/ipo/bid/${bidId}/simulate-listing`, {
         method: 'POST'
       });
-      const data = await res.json();
-      if (data.success) {
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : null;
+      if (data && data.success) {
         setActionMessage({
           type: 'success',
           text: data.message
@@ -136,7 +140,7 @@ export const IPOSection = ({ onExecutePaperTrade }) => {
       } else {
         setActionMessage({
           type: 'error',
-          text: data.error || 'Failed to simulate listing day'
+          text: data?.error || 'Failed to simulate listing day'
         });
       }
     } catch (err) {

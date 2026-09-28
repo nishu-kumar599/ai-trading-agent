@@ -32,8 +32,9 @@ export const NewsSentimentTrader = () => {
     setLoading(true);
     try {
       const res = await fetch('/api/sentiment/news');
-      const data = await res.json();
-      if (data.success) {
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : null;
+      if (data && data.success) {
         setNewsList(data.news || []);
       }
     } catch (err) {
@@ -62,8 +63,9 @@ export const NewsSentimentTrader = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: customText.trim(), symbol: customSymbol })
       });
-      const data = await res.json();
-      if (data.success) {
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : null;
+      if (data && data.success) {
         setAnalysisResult(data.analysis);
       }
     } catch (err) {
@@ -87,8 +89,9 @@ export const NewsSentimentTrader = () => {
           symbol: customSymbol
         })
       });
-      const data = await res.json();
-      if (data.success) {
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : null;
+      if (data && data.success) {
         fetchNews();
         setCustomText('');
         setAnalysisResult(null);
@@ -111,13 +114,14 @@ export const NewsSentimentTrader = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ newsId, horizon: tradeHorizon, quantity: 50 })
       });
-      const data = await res.json();
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : null;
 
-      if (data.success) {
+      if (data && data.success) {
         setTradeNotice(data.message);
         setTimeout(() => setTradeNotice(''), 7000);
       } else {
-        alert(data.message || 'Trade execution failed.');
+        alert(data?.message || 'Trade execution failed.');
       }
     } catch (err) {
       console.error('News trade error:', err);
