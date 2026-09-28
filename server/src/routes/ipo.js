@@ -10,10 +10,10 @@ const {
 const router = express.Router();
 
 // GET /api/ipo/list?status=ALL&category=ALL&search=
-router.get('/list', (req, res) => {
+router.get('/list', async (req, res) => {
   try {
     const { status, category, search } = req.query;
-    const data = getIPOList({ status, category, search });
+    const data = await getIPOList({ status, category, search });
     res.json({
       success: true,
       ...data
@@ -24,9 +24,9 @@ router.get('/list', (req, res) => {
 });
 
 // GET /api/ipo/:id/details
-router.get('/:id/details', (req, res) => {
+router.get('/:id/details', async (req, res) => {
   try {
-    const ipo = getIPODetails(req.params.id);
+    const ipo = await getIPODetails(req.params.id);
     if (!ipo) {
       return res.status(404).json({ success: false, error: 'IPO not found' });
     }
@@ -40,13 +40,13 @@ router.get('/:id/details', (req, res) => {
 });
 
 // POST /api/ipo/bid
-router.post('/bid', (req, res) => {
+router.post('/bid', async (req, res) => {
   try {
     const { ipoId, lots, category, upiId } = req.body;
     if (!ipoId) {
       return res.status(400).json({ success: false, error: 'ipoId is required' });
     }
-    const result = submitPaperBid({ ipoId, lots, category, upiId });
+    const result = await submitPaperBid({ ipoId, lots, category, upiId });
     res.json(result);
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });

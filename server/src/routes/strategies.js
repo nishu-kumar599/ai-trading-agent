@@ -37,8 +37,8 @@ router.get('/calendar', (req, res) => {
 });
 
 // GET /api/strategies/today-audit
-router.get('/today-audit', (req, res) => {
-  const audit = runTodayMarketAudit();
+router.get('/today-audit', async (req, res) => {
+  const audit = await runTodayMarketAudit();
   res.json({
     success: true,
     audit

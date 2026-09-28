@@ -187,11 +187,11 @@ export const IPOSection = ({ onExecutePaperTrade }) => {
               alignItems: 'center',
               gap: '6px'
             }}>
-              <Rocket size={13} />
-              PRIMARY MARKET INTELLIGENCE
+              <span className="pulse-dot" style={{ background: '#10b981' }}></span>
+              LIVE EXCHANGE FEED (NSE & BSE)
             </span>
             <span style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>
-              NSE & BSE • Mainboard & SME
+              Mainboard & SME • Real GMP & Dates
             </span>
           </div>
           <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.3px', margin: '4px 0' }}>
@@ -379,6 +379,29 @@ export const IPOSection = ({ onExecutePaperTrade }) => {
               }}
             />
           </div>
+
+          {/* Sync Live Button */}
+          <button
+            onClick={() => { fetchIpos(); fetchMyBids(); }}
+            disabled={loading}
+            style={{
+              background: 'rgba(255, 255, 255, 0.04)',
+              border: '1px solid var(--border-subtle)',
+              color: 'var(--text-muted)',
+              padding: '6px 12px',
+              borderRadius: '8px',
+              fontSize: '0.76rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.2s ease'
+            }}
+            title="Refresh Real-time IPO Feed"
+          >
+            <RefreshCw size={13} className={loading ? 'spinner' : ''} />
+            <span>Sync Live</span>
+          </button>
         </div>
       </div>
 

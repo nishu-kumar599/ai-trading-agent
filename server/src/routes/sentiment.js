@@ -10,11 +10,16 @@ const {
 const router = express.Router();
 
 // GET /api/sentiment/market
-router.get('/market', (req, res) => {
-  res.json({
-    success: true,
-    data: getMarketSentiment()
-  });
+router.get('/market', async (req, res) => {
+  try {
+    const data = await getMarketSentiment();
+    res.json({
+      success: true,
+      data
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to fetch market sentiment: ' + err.message });
+  }
 });
 
 // GET /api/sentiment/news
