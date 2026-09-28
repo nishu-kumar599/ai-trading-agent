@@ -13,7 +13,8 @@ import {
   ChevronLeft, 
   ChevronRight, 
   Calculator, 
-  BarChart3 
+  BarChart3,
+  Rocket
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -41,6 +42,7 @@ export const Sidebar = ({
       groupTitle: 'MARKET PULSE',
       items: [
         { id: 'indices', label: 'Live Indices & Stocks', icon: BarChart3, badge: 'Nifty/Sensex' },
+        { id: 'ipo', label: 'IPO Intelligence', icon: Rocket, badge: 'GMP / AI Score' },
         { id: 'sentiment', label: 'Market Sentiment', icon: Gauge, badge: 'Fear/Greed' },
         { id: 'news', label: 'News Catalyst Trader', icon: Newspaper, badge: 'NLP Scoring' }
       ]

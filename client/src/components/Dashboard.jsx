@@ -10,6 +10,7 @@ import { PLCalendar } from './PLCalendar';
 import { RiskCalculatorModal } from './RiskCalculatorModal';
 import { MarketTickerTape } from './MarketTickerTape';
 import { MarketIndicesView } from './MarketIndicesView';
+import { IPOSection } from './IPOSection';
 import { 
   TrendingUp, 
   BarChart2, 
@@ -525,6 +526,11 @@ export const Dashboard = () => {
             {activeMainTab === 'indices' && (
               <MarketIndicesView 
                 onExecuteQuickTrade={(stock) => handleExecuteQuickTest('INTRADAY')} 
+              />
+            )}
+            {activeMainTab === 'ipo' && (
+              <IPOSection 
+                onExecutePaperTrade={(ipo) => handleExecuteQuickTest('INTRADAY')} 
               />
             )}
             {activeMainTab === 'calendar' && <PLCalendar />}

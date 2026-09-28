@@ -19,6 +19,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/strategies', require('./routes/strategies'));
 app.use('/api/sentiment', require('./routes/sentiment'));
+app.use('/api/ipo', require('./routes/ipo'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
