@@ -14,7 +14,9 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Layers,
-  Sliders
+  Sliders,
+  ExternalLink,
+  Wifi
 } from 'lucide-react';
 
 export const NewsSentimentTrader = () => {
@@ -178,9 +180,9 @@ export const NewsSentimentTrader = () => {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
             <span style={{
-              background: 'rgba(6, 182, 212, 0.15)',
-              color: '#38bdf8',
-              border: '1px solid rgba(6, 182, 212, 0.3)',
+              background: 'rgba(16, 185, 129, 0.15)',
+              color: 'var(--accent-emerald)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
               padding: '3px 8px',
               borderRadius: '6px',
               fontSize: '0.75rem',
@@ -189,11 +191,11 @@ export const NewsSentimentTrader = () => {
               alignItems: 'center',
               gap: '4px'
             }}>
-              <Newspaper size={14} />
-              AI Natural Language Sentiment Trader
+              <Wifi size={14} />
+              REAL-TIME FINANCIAL NEWS STREAM
             </span>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              Real-time Polarity Scoring (-100 to +100)
+              Live Google News & Financial Media RSS with NLP Polarity Scoring
             </span>
           </div>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>
@@ -440,7 +442,28 @@ export const NewsSentimentTrader = () => {
                 <div style={{ flex: '1', minWidth: '320px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
                     <span className="symbol-badge">{item.symbol}</span>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>{item.source} • {item.timestamp}</span>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      {item.source} • {item.timestamp}
+                      {item.link && item.link.startsWith('http') && (
+                        <a
+                          href={item.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            color: '#38bdf8',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px',
+                            textDecoration: 'none',
+                            marginLeft: '4px',
+                            fontWeight: 600
+                          }}
+                          title="Open original live financial article"
+                        >
+                          <ExternalLink size={11} /> Read Source
+                        </a>
+                      )}
+                    </span>
                     <span
                       style={{
                         fontSize: '0.72rem',

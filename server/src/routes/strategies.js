@@ -54,12 +54,12 @@ router.get('/catalog', (req, res) => {
 });
 
 // GET /api/strategies/scan?horizon=INTRADAY
-router.get('/scan', (req, res) => {
+router.get('/scan', async (req, res) => {
   const horizon = (req.query.horizon || 'INTRADAY').toUpperCase();
   const validHorizons = ['INTRADAY', 'SHORT_TERM', 'MEDIUM_TERM', 'LONG_TERM', 'F_AND_O'];
 
   const selectedHorizon = validHorizons.includes(horizon) ? horizon : 'INTRADAY';
-  const scannedStocks = getMarketUniverse(selectedHorizon);
+  const scannedStocks = await getMarketUniverse(selectedHorizon);
 
   res.json({
     success: true,

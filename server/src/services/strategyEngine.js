@@ -126,8 +126,17 @@ const STRATEGY_CATALOG = {
   }
 };
 
+const { getRealMarketUniverse } = require('./realMarketService');
+
 // Universe of monitored stocks with simulated technical live status
-function getMarketUniverse(horizon = 'INTRADAY') {
+async function getMarketUniverse(horizon = 'INTRADAY') {
+  let sourceStocks = [];
+  try {
+    sourceStocks = await getRealMarketUniverse(horizon);
+  } catch (err) {
+    console.warn('Real market universe fetch fallback:', err.message);
+  }
+
   const baseStocks = [
     {
       symbol: 'RELIANCE.NS',
@@ -263,7 +272,9 @@ function getMarketUniverse(horizon = 'INTRADAY') {
     }
   ];
 
-  return baseStocks.map((stock) => {
+  const stocksToUse = (sourceStocks && sourceStocks.length > 0) ? sourceStocks : baseStocks;
+
+  return stocksToUse.map((stock) => {
     let action = 'HOLD';
     let target1 = 0;
     let target2 = 0;

@@ -305,11 +305,28 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
       <div className="signals-table-card">
         <div className="table-header">
           <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <span style={{
+                background: 'rgba(16, 185, 129, 0.15)',
+                color: 'var(--accent-emerald)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                fontSize: '0.68rem',
+                fontWeight: 800,
+                letterSpacing: '0.5px'
+              }}>
+                REAL MARKET SPOT
+              </span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                Live NSE/BSE Pricing
+              </span>
+            </div>
             <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#fff' }}>
               {selectedHorizon === 'F_AND_O' ? 'Futures & Options Signal Radar' : `${selectedHorizon} Strategy Scanner`}
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: '2px' }}>
-              Automated buy/sell triggers with built-in breakeven ratchets & target projections
+              Authentic exchange data scanned across indicators with automatic breakeven ratchets & target projections
             </p>
           </div>
 

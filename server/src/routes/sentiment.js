@@ -18,11 +18,17 @@ router.get('/market', (req, res) => {
 });
 
 // GET /api/sentiment/news
-router.get('/news', (req, res) => {
-  res.json({
-    success: true,
-    news: getNewsFeed()
-  });
+router.get('/news', async (req, res) => {
+  try {
+    const news = await getNewsFeed();
+    res.json({
+      success: true,
+      count: news.length,
+      news
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to fetch news feed: ' + err.message });
+  }
 });
 
 // POST /api/sentiment/analyze
@@ -54,14 +60,14 @@ router.post('/publish-news', (req, res) => {
 });
 
 // POST /api/sentiment/trade
-router.post('/trade', (req, res) => {
+router.post('/trade', async (req, res) => {
   try {
     const { newsId, horizon, quantity } = req.body;
     if (!newsId) {
       return res.status(400).json({ success: false, message: 'newsId is required.' });
     }
 
-    const result = executeNewsTrade(newsId, horizon || 'INTRADAY', parseInt(quantity) || 50);
+    const result = await executeNewsTrade(newsId, horizon || 'INTRADAY', parseInt(quantity) || 50);
     if (!result) {
       return res.status(404).json({ success: false, message: 'News item not found.' });
     }

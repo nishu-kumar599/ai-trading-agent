@@ -8,6 +8,10 @@
  */
 
 const { executeTrade } = require('./strategyEngine');
+const { fetchLiveMarketNews } = require('./realNewsService');
+const { getRealQuotes } = require('./realMarketService');
+
+let userAddedNews = [];
 
 // Financial dictionary with polarity weights
 const SENTIMENT_LEXICON = {
@@ -276,6 +280,7 @@ function addNewsAndAnalyze(headline, source = 'Live Feed', symbol = 'RELIANCE.NS
   const newNewsItem = {
     id: `news_${Date.now()}`,
     symbol: analysis.symbol,
+    stockName: symbol.replace('.NS', ''),
     headline,
     source,
     timestamp: 'Just now',
@@ -286,33 +291,48 @@ function addNewsAndAnalyze(headline, source = 'Live Feed', symbol = 'RELIANCE.NS
     stopLossProjection: '-0.8%',
     confidence: analysis.confidence,
     impact: Math.abs(analysis.score) >= 60 ? 'HIGH' : 'MEDIUM',
-    rationale: analysis.rationale
+    rationale: analysis.rationale,
+    isRealMarket: true
   };
 
-  newsFeed.unshift(newNewsItem);
+  userAddedNews.unshift(newNewsItem);
   return newNewsItem;
 }
 
-// Execute automated trade from news sentiment
-function executeNewsTrade(newsId, horizon = 'INTRADAY', quantity = 50) {
-  const newsItem = newsFeed.find(n => n.id === newsId);
+// Get combined live news feed from real RSS & user entries
+async function getNewsFeed() {
+  try {
+    const liveNews = await fetchLiveMarketNews();
+    return [...userAddedNews, ...liveNews];
+  } catch (err) {
+    console.warn('Live news fetch fallback:', err.message);
+    return [...userAddedNews, ...newsFeed];
+  }
+}
+
+// Execute automated trade from news sentiment using real market spot prices
+async function executeNewsTrade(newsId, horizon = 'INTRADAY', quantity = 50) {
+  const allNews = await getNewsFeed();
+  const newsItem = allNews.find(n => n.id === newsId);
   if (!newsItem) return null;
 
   if (newsItem.tradeSignal === 'HOLD') {
     throw new Error('Cannot execute trade on neutral sentiment news.');
   }
 
-  // Stock base prices
-  const priceMap = {
-    'RELIANCE.NS': 2984.50,
-    'TCS.NS': 4120.10,
-    'HDFCBANK.NS': 1538.20,
-    'INFY.NS': 1675.25,
-    'ICICIBANK.NS': 1184.40,
-    'TATAMOTORS.NS': 982.50
-  };
+  // Fetch real market quotes to get authentic spot price
+  let basePrice = 1500.0;
+  try {
+    const quotes = await getRealQuotes();
+    const stockClean = (newsItem.symbol || '').replace('.NS', '');
+    const foundStock = quotes.stocks.find(s => s.symbol === stockClean);
+    if (foundStock && foundStock.price) {
+      basePrice = foundStock.price;
+    }
+  } catch (err) {
+    console.warn('Real price lookup fallback:', err.message);
+  }
 
-  const basePrice = priceMap[newsItem.symbol] || 1500.0;
   const isPositive = newsItem.tradeSignal === 'BUY';
 
   let direction = isPositive ? 'BUY' : 'SELL';
@@ -320,17 +340,19 @@ function executeNewsTrade(newsId, horizon = 'INTRADAY', quantity = 50) {
 
   // If executing in F&O horizon:
   if (horizon === 'F_AND_O') {
+    const strikeStep = basePrice > 2500 ? 50 : 20;
+    const atmStrike = Math.round(basePrice / strikeStep) * strikeStep;
     if (isPositive) {
       direction = 'BUY_CALL';
       optionDetails = {
-        recommendedStrike: `${Math.round(basePrice / 50) * 50} CE`,
-        premium: +(basePrice * 0.024).toFixed(2)
+        recommendedStrike: `${atmStrike} CE`,
+        premium: +(basePrice * 0.025).toFixed(2)
       };
     } else {
       direction = 'BUY_PUT';
       optionDetails = {
-        recommendedStrike: `${Math.round(basePrice / 50) * 50} PE`,
-        premium: +(basePrice * 0.024).toFixed(2)
+        recommendedStrike: `${atmStrike} PE`,
+        premium: +(basePrice * 0.025).toFixed(2)
       };
     }
   }
@@ -352,7 +374,7 @@ function executeNewsTrade(newsId, horizon = 'INTRADAY', quantity = 50) {
 
 module.exports = {
   getMarketSentiment: () => marketSentimentData,
-  getNewsFeed: () => newsFeed,
+  getNewsFeed,
   analyzeNewsText,
   addNewsAndAnalyze,
   executeNewsTrade
