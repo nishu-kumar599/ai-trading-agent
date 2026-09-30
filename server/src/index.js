@@ -46,6 +46,21 @@ app.get('/api/agent/overview', (req, res) => {
   });
 });
 
+// Serve static React client in production
+const path = require('path');
+const fs = require('fs');
+const clientDistPath = path.join(__dirname, '../../client/dist');
+if (fs.existsSync(clientDistPath)) {
+  app.use(express.static(clientDistPath));
+  // Express 5 compatible catch-all for SPA client routing
+  app.use((req, res, next) => {
+    if (req.method === 'GET' && !req.path.startsWith('/api')) {
+      return res.sendFile(path.join(clientDistPath, 'index.html'));
+    }
+    next();
+  });
+}
+
 // Start Server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`===========================================`);
