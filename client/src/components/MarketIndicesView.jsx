@@ -22,6 +22,8 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncNotice, setSyncNotice] = useState('');
+  const [isMarketOpen, setIsMarketOpen] = useState(true);
+  const [sessionMessage, setSessionMessage] = useState('');
 
   const [indices, setIndices] = useState([
     {
@@ -205,6 +207,9 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
           setMarketBreadth(data.marketBreadth);
         }
 
+        if (data.isMarketOpen !== undefined) setIsMarketOpen(data.isMarketOpen);
+        if (data.nextSessionMessage) setSessionMessage(data.nextSessionMessage);
+
         setLastRefreshed(data.lastSynced || new Date().toLocaleTimeString('en-IN'));
       }
     } catch (err) {
@@ -268,9 +273,9 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
             <span style={{
-              background: 'rgba(16, 185, 129, 0.2)',
-              color: 'var(--accent-emerald)',
-              border: '1px solid rgba(16, 185, 129, 0.4)',
+              background: isMarketOpen ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+              color: isMarketOpen ? 'var(--accent-emerald)' : '#fbbf24',
+              border: `1px solid ${isMarketOpen ? 'rgba(16, 185, 129, 0.4)' : 'rgba(245, 158, 11, 0.4)'}`,
               padding: '2px 8px',
               borderRadius: '6px',
               fontSize: '0.72rem',
@@ -278,9 +283,9 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px'
-            }}>
+            }} title={sessionMessage || (isMarketOpen ? 'Live Market Trading (09:15 - 15:30 IST)' : 'Market Closed • Prices frozen at settlement')}>
               <Wifi size={12} />
-              AUTHENTIC NSE/BSE REAL MARKET FEEDS
+              {isMarketOpen ? 'AUTHENTIC NSE/BSE REAL MARKET FEEDS' : 'MARKET CLOSED • SETTLED CLOSING PRICES'}
             </span>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
               Last Synced: {lastRefreshed}

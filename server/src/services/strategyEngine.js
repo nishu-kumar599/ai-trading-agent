@@ -301,7 +301,9 @@ async function getMarketUniverse(horizon = 'INTRADAY') {
 }
 
 // Execute a paper trade with Profit-Lock Guard
-function executeTrade({ symbol, horizon, direction, price, quantity, optionDetails = null }) {
+function executeTrade({ symbol, horizon, direction, price, quantity, optionDetails = null, liveSpot = null }) {
+  const { getMarketSessionInfo } = require('./realMarketService');
+  const session = getMarketSessionInfo();
   const isFO = horizon === 'F_AND_O';
   const entryPrice = isFO && optionDetails ? optionDetails.premium : price;
   const isOptionBuyer = direction === 'BUY_CALL' || direction === 'BUY_PUT';
@@ -319,7 +321,9 @@ function executeTrade({ symbol, horizon, direction, price, quantity, optionDetai
 
   const newPosition = {
     id: `pos_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
-    symbol: isFO && optionDetails ? `${symbol} ${optionDetails.recommendedStrike}` : symbol,
+    symbol: isFO && optionDetails && optionDetails.recommendedStrike && !symbol.includes(optionDetails.recommendedStrike)
+      ? `${symbol} ${optionDetails.recommendedStrike}`
+      : symbol,
     horizon,
     direction,
     entryPrice: +entryPrice.toFixed(2),
@@ -332,7 +336,9 @@ function executeTrade({ symbol, horizon, direction, price, quantity, optionDetai
     trailingPct: isFO ? 0.05 : (horizon === 'INTRADAY' ? 0.008 : 0.015),
     unrealizedPL: 0.0,
     unrealizedPLPct: 0.0,
-    status: 'ACTIVE_RUNNING',
+    status: session.isOpen ? 'ACTIVE_RUNNING' : 'AMO_PENDING_OPEN',
+    isAMO: !session.isOpen,
+    underlyingSpotAtEntry: liveSpot || price,
     openedAt: new Date().toISOString()
   };
 
@@ -456,6 +462,9 @@ function resetTestSandbox() {
 }
 
 function updateAndGetActivePositions(realQuotes = null) {
+  const { getMarketSessionInfo } = require('./realMarketService');
+  const session = getMarketSessionInfo();
+
   if (realQuotes && realQuotes.stocks && activePositions.length > 0) {
     const stockMap = {};
     (realQuotes.stocks || []).forEach(s => {
@@ -467,6 +476,12 @@ function updateAndGetActivePositions(realQuotes = null) {
       const cleanSym = pos.symbol.replace('.NS', '').split(' ')[0].toUpperCase();
       const quote = stockMap[cleanSym];
       if (quote && quote.price) {
+        // CRITICAL: When market is closed (after 15:30 IST or weekend),
+        // NEVER update position prices or P&L with after-hours simulated jitter!
+        if (!session.isOpen && pos.currentPrice) {
+          return;
+        }
+
         const isFO = pos.horizon === 'F_AND_O';
         let currentMarketPrice = quote.price;
         if (isFO) {
@@ -483,8 +498,8 @@ function updateAndGetActivePositions(realQuotes = null) {
         pos.unrealizedPL = +(priceDiff * pos.quantity).toFixed(2);
         pos.unrealizedPLPct = +((priceDiff / pos.entryPrice) * 100).toFixed(2);
 
-        // Breakeven Profit-Lock check
-        if (!pos.breakevenActivated && pos.unrealizedPLPct >= 1.0) {
+        // Breakeven Profit-Lock check (only during active market hours)
+        if (session.isOpen && !pos.breakevenActivated && pos.unrealizedPLPct >= 1.0) {
           pos.breakevenActivated = true;
           pos.stopLoss = isUpwardTrade ? +(pos.entryPrice * 1.002).toFixed(2) : +(pos.entryPrice * 0.998).toFixed(2);
           pos.status = 'PROFIT_LOCKED';

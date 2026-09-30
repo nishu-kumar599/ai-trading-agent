@@ -77,9 +77,14 @@ router.post('/trade', async (req, res) => {
       return res.status(404).json({ success: false, message: 'News item not found.' });
     }
 
+    const message = result.trade.isAMO
+      ? `After-Market Order (AMO) placed on ${result.trade.symbol} (${result.trade.direction}) at official closing settlement (₹${result.trade.entryPrice}). Live order tracking activates at 09:15 AM IST.`
+      : `News-driven trade executed successfully! ${result.trade.symbol} (${result.trade.direction}) with Profit-Lock Guard.`;
+
     res.json({
       success: true,
-      message: `News-driven trade executed successfully! ${result.trade.symbol} (${result.trade.direction}) with Profit-Lock Guard.`,
+      message,
+      isAMO: result.trade.isAMO,
       result
     });
   } catch (err) {

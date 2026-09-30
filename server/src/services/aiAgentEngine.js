@@ -23,7 +23,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { getRealQuotes, getRealMarketUniverse } = require('./realMarketService');
+const { getRealQuotes, getRealMarketUniverse, getMarketSessionInfo } = require('./realMarketService');
 const { isMongoConnected } = require('../config/database');
 const { 
   recordTradeOutcome, 
@@ -574,6 +574,7 @@ async function executeAutonomousTrade(candidate) {
 async function monitorAndManagePositions(realQuotes) {
   if (!state.activePositions || state.activePositions.length === 0) return;
 
+  const session = getMarketSessionInfo();
   const stockMap = {};
   if (realQuotes && realQuotes.stocks) {
     realQuotes.stocks.forEach(s => {
@@ -607,6 +608,11 @@ async function monitorAndManagePositions(realQuotes) {
         currentPrice = Math.max(0.5, +(pos.entryPrice + optChange).toFixed(2));
       }
 
+      // CRITICAL: When market is closed, freeze currentPrice at settlement/closing price
+      if (!session.isOpen && pos.currentPrice) {
+        currentPrice = pos.currentPrice;
+      }
+
       pos.currentPrice = +currentPrice.toFixed(2);
       const isOptionBuyer = pos.direction === 'BUY_CALL' || pos.direction === 'BUY_PUT';
       const isUpwardTrade = isOptionBuyer || pos.direction === 'BUY';
@@ -614,6 +620,15 @@ async function monitorAndManagePositions(realQuotes) {
       const priceDiff = isUpwardTrade ? (pos.currentPrice - pos.entryPrice) : (pos.entryPrice - pos.currentPrice);
       pos.unrealizedPL = +(priceDiff * pos.quantity).toFixed(2);
       pos.unrealizedPLPct = +((priceDiff / pos.entryPrice) * 100).toFixed(2);
+
+      // When market is closed, hold overnight positions safely at closing price
+      if (!session.isOpen) {
+        if (pos.horizon === 'INTRADAY' && isMarketCloseSquareoffTime) {
+          // Intraday position must be auto-squared off at market close
+        } else {
+          continue; // Freeze position safely; do not trigger stops/targets after hours
+        }
+      }
 
       // 1. Two-Stage Profit Booking: Scale out 50% at Target 1 and snap SL to Breakeven
       const isTarget1Hit = isUpwardTrade ? pos.currentPrice >= pos.target1 : pos.currentPrice <= pos.target1;
@@ -946,9 +961,12 @@ async function runAutonomousCycle() {
     // Step 1: Manage active positions (Target 1 50% scale-out, trailing stop, breakeven lock, 15:15 IST auto-squareoff)
     await monitorAndManagePositions(quotes);
 
-    // Step 2: If we have capacity and pass guards, scan and execute
+    // Step 2: Check market session status
+    const session = getMarketSessionInfo();
     checkDailyReset();
+
     const canTrade = state.isAutoPilotActive && 
+      session.isOpen &&
       state.activePositions.length < state.maxConcurrentPositions && 
       state.dailyTradesCount < state.dailyTradeLimit &&
       (Date.now() - state.lastTradeTimestamp >= state.tradeCooldownMs);
@@ -966,6 +984,13 @@ async function runAutonomousCycle() {
             await executeAutonomousTrade(bestCandidate);
           }
         }
+      }
+    } else if (state.isAutoPilotActive && !session.isOpen) {
+      // Periodically log standby notice when market is closed (every 20 min)
+      const now = Date.now();
+      if (now - (state.lastClosedNoticeTimestamp || 0) > 1200000) {
+        state.lastClosedNoticeTimestamp = now;
+        addDecisionLog('MARKET_CLOSED', `Exchange session closed (09:15 - 15:30 IST). Sentinel in standby mode with capital locked. Live execution will resume at 09:15 AM IST.`);
       }
     }
   } catch (err) {
@@ -1036,20 +1061,25 @@ module.exports = {
   resetAgentSandbox,
   panicSquareOffAll,
   setRiskProfile,
-  getAgentStatus: () => ({
-    isAutoPilotActive: state.isAutoPilotActive,
-    riskProfile: state.riskProfile,
-    marketRegime: state.marketRegime,
-    maxConcurrentPositions: state.maxConcurrentPositions,
-    virtualCapital: state.virtualCapital,
-    activePositions: state.activePositions,
-    tradeHistory: state.tradeHistory,
-    decisionLogs: state.decisionLogs,
-    accuracy: getAccuracyMetrics(),
-    riskGuard: getRiskGuardStatus(),
-    learning: getLearningStats(),
-    isMongoSynced: isMongoConnected()
-  }),
+  getAgentStatus: () => {
+    const session = getMarketSessionInfo();
+    return {
+      isAutoPilotActive: state.isAutoPilotActive,
+      riskProfile: state.riskProfile,
+      marketRegime: state.marketRegime,
+      marketSession: session,
+      isMarketOpen: session.isOpen,
+      maxConcurrentPositions: state.maxConcurrentPositions,
+      virtualCapital: state.virtualCapital,
+      activePositions: state.activePositions,
+      tradeHistory: state.tradeHistory,
+      decisionLogs: state.decisionLogs,
+      accuracy: getAccuracyMetrics(),
+      riskGuard: getRiskGuardStatus(),
+      learning: getLearningStats(),
+      isMongoSynced: isMongoConnected()
+    };
+  },
   getAccuracyMetrics,
   getRiskGuardStatus,
   getActivePositions: () => state.activePositions,

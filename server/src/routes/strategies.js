@@ -60,9 +60,18 @@ router.get('/scan', async (req, res) => {
 
   const selectedHorizon = validHorizons.includes(horizon) ? horizon : 'INTRADAY';
   const scannedStocks = await getMarketUniverse(selectedHorizon);
+  let session = { isOpen: true, status: 'LIVE_TRADING', tradingHours: '09:15 - 15:30 IST', nextSessionMessage: '' };
+  try {
+    const { getMarketSessionInfo } = require('../services/realMarketService');
+    session = getMarketSessionInfo();
+  } catch (err) {}
 
   res.json({
     success: true,
+    isMarketOpen: session.isOpen,
+    marketStatus: session.status,
+    tradingHours: session.tradingHours,
+    nextSessionMessage: session.nextSessionMessage,
     horizon: selectedHorizon,
     catalog: STRATEGY_CATALOG[selectedHorizon],
     count: scannedStocks.length,
@@ -77,13 +86,18 @@ router.get('/scan', async (req, res) => {
 // GET /api/strategies/positions
 router.get('/positions', async (req, res) => {
   let quotes = null;
+  let session = { isOpen: true, status: 'LIVE_TRADING', nextSessionMessage: '' };
   try {
-    const { getRealQuotes } = require('../services/realMarketService');
+    const { getRealQuotes, getMarketSessionInfo } = require('../services/realMarketService');
     quotes = await getRealQuotes();
+    session = getMarketSessionInfo();
   } catch (err) {}
 
   res.json({
     success: true,
+    isMarketOpen: session.isOpen,
+    marketStatus: session.status,
+    nextSessionMessage: session.nextSessionMessage,
     activePositions: getActivePositions(quotes),
     tradeHistory: getTradeHistory()
   });
@@ -131,9 +145,14 @@ router.post('/execute', async (req, res) => {
       liveSpot
     });
 
+    const executionMsg = trade.isAMO
+      ? `After-Market Order (AMO) placed at official closing settlement (₹${trade.entryPrice}). Live order tracking will activate when exchange opens at 09:15 AM IST.`
+      : `Live Paper Order Executed at Real Market Price (₹${trade.entryPrice}) with Zero-Loss Guard!`;
+
     res.status(201).json({
       success: true,
-      message: `Live Paper Order Executed at Real Market Price (₹${trade.entryPrice}) with Zero-Loss Guard!`,
+      message: executionMsg,
+      isAMO: trade.isAMO,
       trade
     });
   } catch (error) {

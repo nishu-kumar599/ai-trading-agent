@@ -256,12 +256,20 @@ export const AutoPilotCockpit = () => {
               fontSize: '0.75rem',
               fontWeight: 800,
               letterSpacing: '0.5px',
-              background: isAutoPilotActive ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
-              color: isAutoPilotActive ? 'var(--accent-emerald)' : '#fbbf24',
-              border: `1px solid ${isAutoPilotActive ? 'rgba(16, 185, 129, 0.4)' : 'rgba(245, 158, 11, 0.3)'}`
+              background: isAutoPilotActive 
+                ? (agentData?.isMarketOpen ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)')
+                : 'rgba(148, 163, 184, 0.15)',
+              color: isAutoPilotActive 
+                ? (agentData?.isMarketOpen ? 'var(--accent-emerald)' : '#fbbf24')
+                : '#94a3b8',
+              border: `1px solid ${isAutoPilotActive 
+                ? (agentData?.isMarketOpen ? 'rgba(16, 185, 129, 0.4)' : 'rgba(245, 158, 11, 0.35)')
+                : 'rgba(148, 163, 184, 0.25)'}`
             }}>
-              <span className="pulse-dot" style={{ background: isAutoPilotActive ? '#10b981' : '#f59e0b' }}></span>
-              {isAutoPilotActive ? 'AI AUTONOMOUS AGENT ACTIVE (24/7 AUTO-TRADE)' : 'AI AUTO-PILOT PAUSED'}
+              <span className="pulse-dot" style={{ background: isAutoPilotActive ? (agentData?.isMarketOpen ? '#10b981' : '#f59e0b') : '#94a3b8' }}></span>
+              {isAutoPilotActive 
+                ? (agentData?.isMarketOpen ? 'AI AUTONOMOUS AGENT ACTIVE (NSE/BSE LIVE)' : 'AI AUTO-PILOT STANDBY • MARKET CLOSED') 
+                : 'AI AUTO-PILOT PAUSED'}
             </span>
 
             {/* MongoDB Cloud Status */}
@@ -322,6 +330,30 @@ export const AutoPilotCockpit = () => {
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: '1.5', margin: 0 }}>
             Automatically scans <strong>Intraday (Long & Short Selling)</strong>, <strong>F&O Options (Calls & Puts)</strong>, and <strong>Swing Breakouts</strong>. It aligns with <strong>NIFTY 50 Market Regime</strong>, enforces <strong>Two-Stage Profit Booking (50% scale-out at Target 1)</strong>, guarantees Zero-Loss Breakeven protection, and <strong>self-learns from every trade outcome</strong>.
           </p>
+
+          {/* Market Closed Standby Notice */}
+          {agentData?.isMarketOpen === false && (
+            <div style={{
+              marginTop: '14px',
+              padding: '12px 16px',
+              borderRadius: '10px',
+              background: 'rgba(245, 158, 11, 0.1)',
+              border: '1px solid rgba(245, 158, 11, 0.3)',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '10px',
+              color: '#fbbf24',
+              fontSize: '0.82rem'
+            }}>
+              <Clock size={18} style={{ flexShrink: 0, marginTop: '2px', color: '#f59e0b' }} />
+              <div>
+                <strong style={{ color: '#fef3c7' }}>NSE/BSE Exchange is Closed (Trading Hours: 09:15 AM - 03:30 PM IST):</strong>
+                <div style={{ color: '#fde68a', marginTop: '2px', lineHeight: '1.4' }}>
+                  Stock, index, and option prices are frozen at official closing settlement prices (matching Zerodha and Groww). Auto-pilot executions and simulated price fluctuations are paused. The AI Agent will resume live autonomous scanning and order placement at 09:15 AM IST on the next trading day.
+                </div>
+              </div>
+            </div>
+          )}
 
           {actionNotice && (
             <div style={{

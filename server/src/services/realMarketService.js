@@ -273,6 +273,54 @@ async function syncRealMarketData(force = false) {
   return pendingPromise;
 }
 
+/**
+ * Indian Stock Market (NSE/BSE) Trading Session Calculator
+ * Regular Trading Hours: 09:15 AM to 03:30 PM (15:30) IST, Monday to Friday.
+ */
+function getMarketSessionInfo() {
+  const d = new Date();
+  const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+  const ist = new Date(utc + (3600000 * 5.5)); // IST is UTC+5:30
+
+  const day = ist.getDay(); // 0 = Sunday, 6 = Saturday
+  const hours = ist.getHours();
+  const minutes = ist.getMinutes();
+  const totalMinutes = (hours * 60) + minutes;
+
+  const isWeekday = day >= 1 && day <= 5;
+  // NSE/BSE regular trading hours: 09:15 AM (555 min) to 03:30 PM (930 min)
+  const isOpen = isWeekday && (totalMinutes >= 555 && totalMinutes < 930);
+
+  let status = 'CLOSED';
+  let nextSessionMessage = '';
+
+  if (isOpen) {
+    status = 'LIVE_OPEN';
+    nextSessionMessage = 'Live market session in progress (Closes at 03:30 PM IST)';
+  } else if (!isWeekday) {
+    status = 'WEEKEND_CLOSED';
+    nextSessionMessage = 'Market Closed (Weekend). Next trading session opens Monday at 09:15 AM IST';
+  } else if (totalMinutes < 555) {
+    status = 'PRE_MARKET_STANDBY';
+    nextSessionMessage = 'Pre-market standby. Regular trading session opens today at 09:15 AM IST';
+  } else {
+    status = 'POST_MARKET_CLOSED';
+    const isFriday = day === 5;
+    nextSessionMessage = isFriday 
+      ? 'Market Closed for the day. Next trading session opens Monday at 09:15 AM IST'
+      : 'Market Closed for the day. Next trading session opens tomorrow at 09:15 AM IST';
+  }
+
+  return {
+    isOpen,
+    status,
+    tradingHours: '09:15 AM - 03:30 PM IST (Mon - Fri)',
+    nextSessionMessage,
+    istTimeString: ist.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    istDateString: ist.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+  };
+}
+
 let liveTickInterval = null;
 
 function startLiveTickerStream() {
@@ -282,7 +330,21 @@ function startLiveTickerStream() {
   if (marketCache.stocks.length === 0) marketCache.stocks = JSON.parse(JSON.stringify(FALLBACK_STOCKS));
 
   liveTickInterval = setInterval(() => {
-    // Generate realistic real-time micro-ticks on stocks
+    const session = getMarketSessionInfo();
+
+    // CRITICAL: When market is closed (after 15:30 IST or on weekends),
+    // NEVER generate random price jitter! Prices freeze completely at official closing prices.
+    if (!session.isOpen) {
+      (marketCache.stocks || []).forEach(stock => {
+        stock.tickDirection = 'SAME';
+      });
+      (marketCache.indices || []).forEach(idx => {
+        idx.tickDirection = 'SAME';
+      });
+      return;
+    }
+
+    // Generate realistic real-time micro-ticks on stocks ONLY during active market hours (09:15 - 15:30 IST)
     (marketCache.stocks || []).forEach(stock => {
       const prev = stock.price;
       const jitterPct = (Math.random() - 0.495) * 0.0012; // -0.06% to +0.06%
@@ -302,7 +364,7 @@ function startLiveTickerStream() {
       stock.isPositive = changePct >= 0;
     });
 
-    // Generate micro-ticks on indices
+    // Generate micro-ticks on indices ONLY during active market hours
     (marketCache.indices || []).forEach(idx => {
       const prev = idx.price;
       const jitterPct = (Math.random() - 0.495) * 0.0006;
@@ -320,7 +382,7 @@ function startLiveTickerStream() {
       idx.isPositive = changePct >= 0;
     });
 
-    // Auto-update active paper positions P&L on every tick
+    // Auto-update active paper positions P&L on every live tick
     try {
       const { getActivePositions } = require('./strategyEngine');
       getActivePositions(marketCache);
@@ -337,17 +399,22 @@ startLiveTickerStream();
  */
 async function getRealQuotes() {
   await syncRealMarketData();
+  const session = getMarketSessionInfo();
   const indices = marketCache.indices && marketCache.indices.length > 0 ? marketCache.indices : FALLBACK_INDICES;
   const stocks = marketCache.stocks && marketCache.stocks.length > 0 ? marketCache.stocks : FALLBACK_STOCKS;
 
   return {
+    isMarketOpen: session.isOpen,
+    marketStatus: session.status,
+    tradingHours: session.tradingHours,
+    nextSessionMessage: session.nextSessionMessage,
     indices: indices.map(i => ({
       symbol: i.symbol,
       name: i.name,
       category: i.category || 'INDEX',
       price: i.price,
       prevPrice: i.prevPrice || i.price,
-      tickDirection: i.tickDirection || 'SAME',
+      tickDirection: session.isOpen ? (i.tickDirection || 'SAME') : 'SAME',
       changeValue: i.changeValue,
       changePct: i.changePct,
       isPositive: i.isPositive !== undefined ? i.isPositive : !String(i.changePct).startsWith('-'),
@@ -360,7 +427,7 @@ async function getRealQuotes() {
       fullName: s.name,
       price: s.price,
       prevPrice: s.prevPrice || s.price,
-      tickDirection: s.tickDirection || 'SAME',
+      tickDirection: session.isOpen ? (s.tickDirection || 'SAME') : 'SAME',
       changeValue: s.changeValue,
       changePct: s.changePct,
       isPositive: !String(s.changePct).startsWith('-'),
@@ -372,9 +439,9 @@ async function getRealQuotes() {
       foAction: s.foAction,
       recommendedStrike: s.recommendedStrike
     })),
-    lastSynced: new Date().toLocaleTimeString('en-IN'),
+    lastSynced: session.istTimeString,
     tickTimestamp: Date.now(),
-    isLive: true
+    isLive: session.isOpen
   };
 }
 
@@ -383,6 +450,7 @@ async function getRealQuotes() {
  */
 async function getRealMarketDetection() {
   await syncRealMarketData();
+  const session = getMarketSessionInfo();
   const indices = marketCache.indices && marketCache.indices.length > 0 ? marketCache.indices : FALLBACK_INDICES;
   const stocks = marketCache.stocks && marketCache.stocks.length > 0 ? marketCache.stocks : FALLBACK_STOCKS;
 
@@ -395,6 +463,10 @@ async function getRealMarketDetection() {
   });
 
   return {
+    isMarketOpen: session.isOpen,
+    marketStatus: session.status,
+    tradingHours: session.tradingHours,
+    nextSessionMessage: session.nextSessionMessage,
     indices,
     stocks,
     marketBreadth: {
@@ -405,7 +477,7 @@ async function getRealMarketDetection() {
     },
     topGainers: [...stocks].sort((a, b) => parseFloat(b.changePct) - parseFloat(a.changePct)).slice(0, 5),
     topLosers: [...stocks].sort((a, b) => parseFloat(a.changePct) - parseFloat(b.changePct)).slice(0, 5),
-    lastSynced: new Date().toLocaleTimeString('en-IN'),
+    lastSynced: session.istTimeString,
     tickTimestamp: Date.now(),
     syncStatus: marketCache.syncStatus,
     isRealMarket: true
@@ -435,6 +507,7 @@ async function getRealMarketUniverse(horizon = 'INTRADAY') {
 }
 
 module.exports = {
+  getMarketSessionInfo,
   syncRealMarketData,
   getRealQuotes,
   getRealMarketDetection,

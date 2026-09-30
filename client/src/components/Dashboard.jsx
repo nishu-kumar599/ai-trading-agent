@@ -298,21 +298,39 @@ export const Dashboard = () => {
               <span>{isSidebarCollapsed ? "Show Sidebar" : "Close Sidebar"}</span>
             </button>
 
-            <span className="live-status-chip" style={{
-              background: 'rgba(16, 185, 129, 0.12)',
-              color: 'var(--accent-emerald)',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
-              padding: '4px 10px',
-              borderRadius: '6px',
-              fontSize: '0.74rem',
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}>
-              <span className="pulse-dot" style={{ background: '#10b981' }}></span>
-              Live Algorithmic Execution Core
-            </span>
+            {realQuotes?.isMarketOpen === false ? (
+              <span className="live-status-chip" style={{
+                background: 'rgba(245, 158, 11, 0.12)',
+                color: '#fbbf24',
+                border: '1px solid rgba(245, 158, 11, 0.35)',
+                padding: '4px 10px',
+                borderRadius: '6px',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }} title={realQuotes?.nextSessionMessage || "Exchange Closed (09:15 - 15:30 IST). Prices frozen at official closing settlement."}>
+                <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#f59e0b', display: 'inline-block' }}></span>
+                Market Closed • Settled Prices
+              </span>
+            ) : (
+              <span className="live-status-chip" style={{
+                background: 'rgba(16, 185, 129, 0.12)',
+                color: 'var(--accent-emerald)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                padding: '4px 10px',
+                borderRadius: '6px',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}>
+                <span className="pulse-dot" style={{ background: '#10b981' }}></span>
+                Live Algorithmic Execution Core
+              </span>
+            )}
             <span className="terminal-user-badge" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
               Terminal Active • {user?.email || 'demo@aitrading.com'}
             </span>

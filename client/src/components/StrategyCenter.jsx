@@ -38,6 +38,8 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
   const [orderQuantity, setOrderQuantity] = useState(50);
   const [executingOrder, setExecutingOrder] = useState(false);
   const [executionNotice, setExecutionNotice] = useState('');
+  const [isMarketOpen, setIsMarketOpen] = useState(true);
+  const [marketStatusMsg, setMarketStatusMsg] = useState('');
 
   // Profit-Lock interactive controls
   const [autoBreakeven, setAutoBreakeven] = useState(true);
@@ -60,6 +62,8 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
       const data = text ? JSON.parse(text) : null;
       if (data && data.success) {
         setScanData(data);
+        if (data.isMarketOpen !== undefined) setIsMarketOpen(data.isMarketOpen);
+        if (data.nextSessionMessage) setMarketStatusMsg(data.nextSessionMessage);
       }
     } catch (err) {
       console.error('Failed to load strategy scan:', err);
@@ -77,6 +81,8 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
       if (data && data.success) {
         setActivePositions(data.activePositions || []);
         setTradeHistory(data.tradeHistory || []);
+        if (data.isMarketOpen !== undefined) setIsMarketOpen(data.isMarketOpen);
+        if (data.nextSessionMessage) setMarketStatusMsg(data.nextSessionMessage);
       }
     } catch (err) {
       console.error('Failed to fetch positions:', err);
@@ -315,19 +321,19 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
               <span style={{
-                background: 'rgba(16, 185, 129, 0.15)',
-                color: 'var(--accent-emerald)',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
+                background: isMarketOpen ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                color: isMarketOpen ? 'var(--accent-emerald)' : '#fbbf24',
+                border: `1px solid ${isMarketOpen ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.35)'}`,
                 padding: '2px 8px',
                 borderRadius: '4px',
                 fontSize: '0.68rem',
                 fontWeight: 800,
                 letterSpacing: '0.5px'
               }}>
-                REAL MARKET SPOT
+                {isMarketOpen ? 'REAL MARKET SPOT' : 'SETTLED CLOSING PRICES'}
               </span>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                Live NSE/BSE Pricing
+                {isMarketOpen ? 'Live NSE/BSE Pricing' : 'NSE/BSE Closed (09:15 - 15:30 IST)'}
               </span>
             </div>
             <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#fff' }}>
@@ -484,7 +490,13 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
           <div className="glass-card" style={{ maxWidth: '480px', width: '100%', padding: '28px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
               <div>
-                <span className="badge-signal-buy">{selectedHorizon} ORDER</span>
+                <span className={isMarketOpen ? "badge-signal-buy" : "badge-signal-hold"} style={{
+                  background: isMarketOpen ? undefined : 'rgba(245, 158, 11, 0.15)',
+                  color: isMarketOpen ? undefined : '#fbbf24',
+                  borderColor: isMarketOpen ? undefined : 'rgba(245, 158, 11, 0.35)'
+                }}>
+                  {isMarketOpen ? `${selectedHorizon} ORDER` : 'AMO (AFTER-MARKET ORDER)'}
+                </span>
                 <h3 style={{ fontSize: '1.3rem', fontWeight: 700, color: '#fff', marginTop: '4px' }}>
                   Execute {selectedStockToTrade.symbol}
                 </h3>
@@ -531,6 +543,27 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
               />
             </div>
 
+            {/* Market Closed AMO Notice */}
+            {!isMarketOpen && (
+              <div style={{
+                background: 'rgba(245, 158, 11, 0.1)',
+                border: '1px solid rgba(245, 158, 11, 0.3)',
+                borderRadius: '8px',
+                padding: '10px 12px',
+                marginBottom: '16px',
+                fontSize: '0.8rem',
+                color: '#fbbf24',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <Clock size={16} style={{ flexShrink: 0, color: '#f59e0b' }} />
+                <div>
+                  <strong>Exchange Closed:</strong> Placed as an After-Market Order (AMO) at official closing settlement. Live tracking activates at 09:15 AM IST.
+                </div>
+              </div>
+            )}
+
             {/* Profit-Lock Confirmation Check */}
             <div style={{
               background: 'rgba(16, 185, 129, 0.08)',
@@ -557,7 +590,7 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
                 onClick={() => handleExecuteTrade(selectedStockToTrade)}
                 disabled={executingOrder}
               >
-                {executingOrder ? 'Executing...' : 'Confirm & Execute Trade'}
+                {executingOrder ? 'Executing...' : (!isMarketOpen ? 'Place After-Market Order (AMO)' : 'Confirm & Execute Trade')}
               </button>
               <button
                 type="button"
@@ -583,16 +616,29 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
         <div className="table-header">
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-              <span className="pulse-dot" style={{ background: '#10b981' }}></span>
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-emerald)', textTransform: 'uppercase' }}>
-                Live Exchange Stream Active
+              <span className={isMarketOpen ? "pulse-dot" : ""} style={{
+                background: isMarketOpen ? '#10b981' : '#f59e0b',
+                width: isMarketOpen ? undefined : '7px',
+                height: isMarketOpen ? undefined : '7px',
+                borderRadius: '50%',
+                display: 'inline-block'
+              }}></span>
+              <span style={{
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                color: isMarketOpen ? 'var(--accent-emerald)' : '#fbbf24',
+                textTransform: 'uppercase'
+              }}>
+                {isMarketOpen ? 'Live Exchange Stream Active' : 'Market Closed • Prices Frozen at Settlement'}
               </span>
             </div>
             <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.3px' }}>
               Active Positions & Real-Time P&L
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: '2px' }}>
-              Prices and returns update live every 1.5s with automated Zero-Loss Breakeven & Trailing Stop
+              {isMarketOpen 
+                ? 'Prices and returns update live every 1.5s with automated Zero-Loss Breakeven & Trailing Stop' 
+                : 'Exchange is closed (09:15 - 15:30 IST). Prices are frozen at official closing settlement (Zerodha/Groww aligned).'}
             </p>
           </div>
           <span style={{ fontSize: '0.8rem', color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '4px 10px', borderRadius: '6px', fontWeight: 700 }}>

@@ -13,6 +13,12 @@ export const MarketTickerTape = ({ onSelectTicker }) => {
     { symbol: 'INFY', price: 1540.20, change: -24.80, pct: '-1.58%', isUp: false, isIndex: false }
   ]);
   const [isLiveStream, setIsLiveStream] = useState(true);
+  const [sessionInfo, setSessionInfo] = useState({
+    isOpen: true,
+    status: 'LIVE_TRADING',
+    tradingHours: '09:15 - 15:30 IST',
+    nextSessionMessage: ''
+  });
 
   // Fetch real market quotes
   const fetchLiveQuotes = async () => {
@@ -21,6 +27,15 @@ export const MarketTickerTape = ({ onSelectTicker }) => {
       const text = await res.text();
       const data = text ? JSON.parse(text) : null;
       if (data && data.success) {
+        if (data.isMarketOpen !== undefined) {
+          setSessionInfo({
+            isOpen: data.isMarketOpen,
+            status: data.marketStatus || 'LIVE_TRADING',
+            tradingHours: data.tradingHours || '09:15 - 15:30 IST',
+            nextSessionMessage: data.nextSessionMessage || ''
+          });
+        }
+
         const combined = [];
         
         // Add indices
@@ -55,7 +70,7 @@ export const MarketTickerTape = ({ onSelectTicker }) => {
 
         if (combined.length > 0) {
           setTicks(combined);
-          setIsLiveStream(true);
+          setIsLiveStream(data.isMarketOpen ?? true);
         }
       }
     } catch (err) {
@@ -86,36 +101,39 @@ export const MarketTickerTape = ({ onSelectTicker }) => {
       zIndex: 95
     }}>
       {/* Live Badge Left Anchor */}
-      <div style={{
-        background: 'rgba(11, 16, 28, 0.98)',
-        height: '100%',
-        padding: '0 14px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        borderRight: '1px solid var(--border-subtle)',
-        zIndex: 10,
-        flexShrink: 0
-      }}>
+      <div 
+        title={sessionInfo.isOpen ? "NSE/BSE Live Market Session Active (09:15 - 15:30 IST)" : (sessionInfo.nextSessionMessage || "Exchange Closed • Prices frozen at official closing settlement")}
+        style={{
+          background: 'rgba(11, 16, 28, 0.98)',
+          height: '100%',
+          padding: '0 14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          borderRight: '1px solid var(--border-subtle)',
+          zIndex: 10,
+          flexShrink: 0
+        }}
+      >
         <span style={{
           width: '7px',
           height: '7px',
           borderRadius: '50%',
-          background: 'var(--accent-emerald)',
-          boxShadow: '0 0 8px var(--accent-emerald)',
+          background: sessionInfo.isOpen ? 'var(--accent-emerald)' : '#f59e0b',
+          boxShadow: sessionInfo.isOpen ? '0 0 8px var(--accent-emerald)' : 'none',
           display: 'inline-block'
         }}></span>
         <span style={{
           fontSize: '0.68rem',
           fontWeight: 800,
-          color: 'var(--accent-emerald)',
+          color: sessionInfo.isOpen ? 'var(--accent-emerald)' : '#fbbf24',
           letterSpacing: '0.6px',
           textTransform: 'uppercase',
           display: 'flex',
           alignItems: 'center',
           gap: '4px'
         }}>
-          REAL MARKET
+          {sessionInfo.isOpen ? 'REAL MARKET' : 'MARKET CLOSED'}
         </span>
       </div>
 
