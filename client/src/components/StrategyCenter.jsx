@@ -399,8 +399,8 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
                       <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#fff' }}>
                         ₹{selectedHorizon === 'F_AND_O' ? stock.optPremium : stock.price}
                       </div>
-                      <div style={{ fontSize: '0.72rem', color: stock.changePct.startsWith('+') ? '#34d399' : '#f43f5e' }}>
-                        {stock.changePct}
+                      <div style={{ fontSize: '0.72rem', color: String(stock.changePct || '').startsWith('+') ? '#34d399' : '#f43f5e' }}>
+                        {stock.changePct || '0.00%'}
                       </div>
                     </td>
                     <td>
@@ -702,7 +702,7 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
                       <td>
                         <span style={{ fontSize: '0.75rem', color: '#93c5fd' }}>{pos.horizon}</span>
                       </td>
-                      <td style={{ fontFamily: 'var(--font-mono)' }}>₹{pos.entryPrice.toFixed(2)}</td>
+                      <td style={{ fontFamily: 'var(--font-mono)' }}>₹{Number(pos.entryPrice || 0).toFixed(2)}</td>
                       <td>
                         <div style={{
                           fontFamily: 'var(--font-mono)',
@@ -713,7 +713,7 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
                           gap: '6px'
                         }}>
                           <span className="pulse-dot" style={{ background: isProfitable ? '#10b981' : '#f87171' }}></span>
-                          ₹{pos.currentPrice.toFixed(2)}
+                          ₹{Number(pos.currentPrice || 0).toFixed(2)}
                         </div>
                       </td>
                       <td style={{ fontFamily: 'var(--font-mono)', color: pos.breakevenActivated ? '#34d399' : '#f87171' }}>
@@ -738,7 +738,7 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
                           width: 'fit-content'
                         }}>
                           {isProfitable ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                          {isProfitable ? '+' : ''}₹{pos.unrealizedPL.toLocaleString('en-IN', { minimumFractionDigits: 2 })} ({pos.unrealizedPLPct >= 0 ? `+${pos.unrealizedPLPct}%` : `${pos.unrealizedPLPct}%`})
+                          {isProfitable ? '+' : ''}₹{Number(pos.unrealizedPL || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })} ({Number(pos.unrealizedPLPct || 0) >= 0 ? `+${pos.unrealizedPLPct || 0}%` : `${pos.unrealizedPLPct || 0}%`})
                         </div>
                       </td>
                       <td>

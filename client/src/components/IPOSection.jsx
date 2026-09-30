@@ -739,14 +739,14 @@ export const IPOSection = ({ onExecutePaperTrade }) => {
                         <span style={{
                           fontSize: '0.72rem',
                           fontWeight: 800,
-                          color: ipo.aiRating.verdict.includes('STRONG') 
+                          color: String(ipo.aiRating?.verdict || '').includes('STRONG') 
                             ? 'var(--accent-emerald)' 
-                            : (ipo.aiRating.verdict.includes('AVOID') ? 'var(--danger)' : '#38bdf8')
+                            : (String(ipo.aiRating?.verdict || '').includes('AVOID') ? 'var(--danger)' : '#38bdf8')
                         }}>
-                          ★ AI VERDICT: {ipo.aiRating.verdict}
+                          ★ AI VERDICT: {ipo.aiRating?.verdict || 'NEUTRAL'}
                         </span>
                         <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 700 }}>
-                          Score: {ipo.aiRating.score}/100
+                          Score: {ipo.aiRating?.score || 50}/100
                         </span>
                       </div>
                       <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>

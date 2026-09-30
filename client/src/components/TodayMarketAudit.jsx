@@ -334,8 +334,11 @@ export const TodayMarketAudit = () => {
               </thead>
               <tbody>
                 {auditData?.trades?.map((t) => {
-                const isWin = t.status === 'WIN';
-                const isBreakeven = t.status === 'BREAKEVEN';
+                const plNum = Number(t.realizedPL || 0);
+                const pctNum = Number(t.realizedPLPct || 0);
+                const isWin = t.status === 'WIN' || plNum > 0;
+                const isBreakeven = t.status === 'BREAKEVEN' || plNum === 0;
+                const directionStr = String(t.direction || 'BUY');
 
                 return (
                   <tr key={t.id}>
@@ -348,11 +351,11 @@ export const TodayMarketAudit = () => {
                       <div style={{ fontSize: '0.72rem', color: '#93c5fd' }}>{t.segment} • {t.strategy}</div>
                     </td>
                     <td>
-                      <span className={t.direction.includes('BUY') ? 'badge-signal-buy' : 'badge-signal-hold'} style={{
-                        background: t.direction.includes('PUT') || t.direction === 'SELL' ? 'rgba(244, 63, 94, 0.15)' : undefined,
-                        color: t.direction.includes('PUT') || t.direction === 'SELL' ? '#fda4af' : undefined
+                      <span className={directionStr.includes('BUY') ? 'badge-signal-buy' : 'badge-signal-hold'} style={{
+                        background: directionStr.includes('PUT') || directionStr === 'SELL' ? 'rgba(244, 63, 94, 0.15)' : undefined,
+                        color: directionStr.includes('PUT') || directionStr === 'SELL' ? '#fda4af' : undefined
                       }}>
-                        {t.direction}
+                        {directionStr}
                       </span>
                     </td>
                     <td style={{ fontFamily: 'var(--font-mono)' }}>₹{t.entryPrice}</td>
@@ -361,9 +364,9 @@ export const TodayMarketAudit = () => {
                       <div style={{
                         fontFamily: 'var(--font-mono)',
                         fontWeight: 700,
-                        color: isWin ? '#34d399' : (isBreakeven ? '#38bdf8' : '#f43f5e')
+                        color: plNum > 0 ? '#34d399' : (isBreakeven ? '#38bdf8' : '#f43f5e')
                       }}>
-                        +₹{t.realizedPL.toFixed(2)} (+{t.realizedPLPct}%)
+                        {plNum >= 0 ? '+' : ''}₹{plNum.toFixed(2)} ({pctNum >= 0 ? '+' : ''}{pctNum.toFixed(2)}%)
                       </div>
                     </td>
                     <td>

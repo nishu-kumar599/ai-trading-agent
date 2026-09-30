@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { Login } from './components/Login';
 import { Signup } from './components/Signup';
 import { Dashboard } from './components/Dashboard';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { TrendingUp } from 'lucide-react';
 
 function AppContent() {
@@ -49,7 +50,9 @@ export default function App() {
   return (
     <AuthProvider>
       <div className="grid-overlay"></div>
-      <AppContent />
+      <ErrorBoundary>
+        <AppContent />
+      </ErrorBoundary>
     </AuthProvider>
   );
 }

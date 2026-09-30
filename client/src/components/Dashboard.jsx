@@ -11,6 +11,7 @@ import { RiskCalculatorModal } from './RiskCalculatorModal';
 import { MarketTickerTape } from './MarketTickerTape';
 import { MarketIndicesView } from './MarketIndicesView';
 import { IPOSection } from './IPOSection';
+import { ErrorBoundary } from './ErrorBoundary';
 import { 
   TrendingUp, 
   BarChart2, 
@@ -608,59 +609,61 @@ export const Dashboard = () => {
 
           {/* Dynamic Active Section Content */}
           <section style={{ marginTop: '8px' }}>
-            {activeMainTab === 'indices' && (
-              <MarketIndicesView 
-                onExecuteQuickTrade={(stock) => handleExecuteQuickTest('INTRADAY')} 
-              />
-            )}
-            {activeMainTab === 'ipo' && (
-              <IPOSection 
-                onExecutePaperTrade={(ipo) => handleExecuteQuickTest('INTRADAY')} 
-              />
-            )}
-            {activeMainTab === 'calendar' && <PLCalendar />}
-            {activeMainTab === 'today_audit' && <TodayMarketAudit />}
-            {activeMainTab === 'sentiment' && <MarketSentimentView />}
-            {activeMainTab === 'news' && <NewsSentimentTrader />}
+            <ErrorBoundary resetKey={activeMainTab} fallbackAction={() => setActiveMainTab('calendar')}>
+              {activeMainTab === 'indices' && (
+                <MarketIndicesView 
+                  onExecuteQuickTrade={(stock) => handleExecuteQuickTest('INTRADAY')} 
+                />
+              )}
+              {activeMainTab === 'ipo' && (
+                <IPOSection 
+                  onExecutePaperTrade={(ipo) => handleExecuteQuickTest('INTRADAY')} 
+                />
+              )}
+              {activeMainTab === 'calendar' && <PLCalendar />}
+              {activeMainTab === 'today_audit' && <TodayMarketAudit />}
+              {activeMainTab === 'sentiment' && <MarketSentimentView />}
+              {activeMainTab === 'news' && <NewsSentimentTrader />}
 
-            {activeMainTab === 'intraday' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <SegmentExplainer segment="INTRADAY" />
-                <StrategyCenter initialHorizon="INTRADAY" hideInternalTabs={true} />
-              </div>
-            )}
+              {activeMainTab === 'intraday' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <SegmentExplainer segment="INTRADAY" />
+                  <StrategyCenter initialHorizon="INTRADAY" hideInternalTabs={true} />
+                </div>
+              )}
 
-            {activeMainTab === 'short_term' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <SegmentExplainer segment="SHORT_TERM" />
-                <StrategyCenter initialHorizon="SHORT_TERM" hideInternalTabs={true} />
-              </div>
-            )}
+              {activeMainTab === 'short_term' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <SegmentExplainer segment="SHORT_TERM" />
+                  <StrategyCenter initialHorizon="SHORT_TERM" hideInternalTabs={true} />
+                </div>
+              )}
 
-            {activeMainTab === 'medium_term' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <SegmentExplainer segment="MEDIUM_TERM" />
-                <StrategyCenter initialHorizon="MEDIUM_TERM" hideInternalTabs={true} />
-              </div>
-            )}
+              {activeMainTab === 'medium_term' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <SegmentExplainer segment="MEDIUM_TERM" />
+                  <StrategyCenter initialHorizon="MEDIUM_TERM" hideInternalTabs={true} />
+                </div>
+              )}
 
-            {activeMainTab === 'long_term' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <SegmentExplainer segment="LONG_TERM" />
-                <StrategyCenter initialHorizon="LONG_TERM" hideInternalTabs={true} />
-              </div>
-            )}
+              {activeMainTab === 'long_term' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <SegmentExplainer segment="LONG_TERM" />
+                  <StrategyCenter initialHorizon="LONG_TERM" hideInternalTabs={true} />
+                </div>
+              )}
 
-            {activeMainTab === 'f_and_o' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <SegmentExplainer segment="F_AND_O" />
-                <StrategyCenter initialHorizon="F_AND_O" hideInternalTabs={true} />
-              </div>
-            )}
+              {activeMainTab === 'f_and_o' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <SegmentExplainer segment="F_AND_O" />
+                  <StrategyCenter initialHorizon="F_AND_O" hideInternalTabs={true} />
+                </div>
+              )}
 
-            {activeMainTab === 'positions' && (
-              <StrategyCenter initialHorizon="INTRADAY" hideInternalTabs={false} />
-            )}
+              {activeMainTab === 'positions' && (
+                <StrategyCenter initialHorizon="INTRADAY" hideInternalTabs={false} />
+              )}
+            </ErrorBoundary>
           </section>
         </main>
       </div>

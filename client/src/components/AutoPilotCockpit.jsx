@@ -24,7 +24,8 @@ import {
   Download,
   LineChart,
   Sliders,
-  Compass
+  Compass,
+  Target
 } from 'lucide-react';
 import { CandlestickModal } from './CandlestickModal';
 
@@ -687,10 +688,10 @@ export const AutoPilotCockpit = () => {
                         fontWeight: 800,
                         padding: '2px 6px',
                         borderRadius: '4px',
-                        background: pos.direction.includes('BUY') ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-                        color: pos.direction.includes('BUY') ? 'var(--accent-emerald)' : '#f87171'
+                        background: (pos.direction || '').includes('BUY') ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                        color: (pos.direction || '').includes('BUY') ? 'var(--accent-emerald)' : '#f87171'
                       }}>
-                        {pos.direction}
+                        {pos.direction || 'BUY'}
                       </span>
                       <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
                         {pos.horizon} • Qty: {pos.quantity}
@@ -1179,7 +1180,7 @@ export const AutoPilotCockpit = () => {
                   </div>
 
                   <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>
-                    {log.displayTime || new Date(log.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    {log.displayTime || (log.timestamp ? new Date(log.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }))}
                   </span>
                 </div>
               );
