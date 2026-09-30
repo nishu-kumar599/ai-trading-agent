@@ -26,8 +26,10 @@ import {
   Calculator,
   PanelLeftClose,
   PanelLeftOpen,
-  BarChart3
+  BarChart3,
+  Menu
 } from 'lucide-react';
+import { MobileBottomNav } from './MobileBottomNav';
 
 export const Dashboard = () => {
   const { user } = useAuth();
@@ -36,6 +38,7 @@ export const Dashboard = () => {
   const [activeMainTab, setActiveMainTab] = useState('calendar'); // Open on Calendar / Audit
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Testing mode state & real market grounding
   const [testBalance, setTestBalance] = useState(100000);
@@ -219,13 +222,15 @@ export const Dashboard = () => {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-main)' }}>
-      {/* Left Sidebar Navigation (Collapsible) */}
+      {/* Left Sidebar Navigation (Collapsible on Desktop, Off-Canvas Drawer on Mobile) */}
       <Sidebar 
         activeTab={activeMainTab} 
         onSelectTab={setActiveMainTab} 
         onOpenCalculator={() => setIsCalculatorOpen(true)}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
+        isMobileOpen={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
 
       {/* Main App Workspace */}
@@ -234,11 +239,11 @@ export const Dashboard = () => {
         <MarketTickerTape onSelectTicker={(item) => setActiveMainTab('indices')} />
 
         {/* Top Header Bar */}
-        <header style={{
+        <header className="dashboard-top-header" style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '14px 28px',
+          padding: '12px 20px',
           background: 'rgba(9, 9, 11, 0.98)',
           backdropFilter: 'blur(16px)',
           borderBottom: '1px solid var(--border-subtle)',
@@ -246,10 +251,32 @@ export const Dashboard = () => {
           top: 0,
           zIndex: 90
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            {/* Close / Collapse Sidebar Option Button */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {/* Mobile Hamburger Drawer Button */}
+            <button
+              onClick={() => setIsMobileSidebarOpen(true)}
+              className="mobile-menu-trigger"
+              type="button"
+              title="Open Navigation Menu"
+              style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid var(--border-subtle)',
+                color: '#fff',
+                padding: '7px 10px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                display: 'none',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <Menu size={18} />
+            </button>
+
+            {/* Close / Collapse Sidebar Option Button (Desktop Only) */}
             <button
               onClick={() => setIsSidebarCollapsed(prev => !prev)}
+              className="desktop-sidebar-toggle"
               style={{
                 background: 'rgba(255, 255, 255, 0.04)',
                 border: '1px solid var(--border-subtle)',
@@ -265,26 +292,18 @@ export const Dashboard = () => {
                 transition: 'all 0.2s ease'
               }}
               title={isSidebarCollapsed ? "Expand Sidebar (Show full menu)" : "Close Sidebar (Icon-only mode)"}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = '#fff';
-                e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.4)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = 'var(--text-muted)';
-                e.currentTarget.style.borderColor = 'var(--border-subtle)';
-              }}
             >
               {isSidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
               <span>{isSidebarCollapsed ? "Show Sidebar" : "Close Sidebar"}</span>
             </button>
 
-            <span style={{
+            <span className="live-status-chip" style={{
               background: 'rgba(16, 185, 129, 0.12)',
               color: 'var(--accent-emerald)',
               border: '1px solid rgba(16, 185, 129, 0.3)',
-              padding: '4px 12px',
+              padding: '4px 10px',
               borderRadius: '6px',
-              fontSize: '0.75rem',
+              fontSize: '0.74rem',
               fontWeight: 700,
               display: 'flex',
               alignItems: 'center',
@@ -293,7 +312,7 @@ export const Dashboard = () => {
               <span className="pulse-dot" style={{ background: '#10b981' }}></span>
               Live Algorithmic Execution Core
             </span>
-            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+            <span className="terminal-user-badge" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
               Terminal Active • {user?.email || 'demo@aitrading.com'}
             </span>
           </div>
@@ -650,6 +669,17 @@ export const Dashboard = () => {
       <RiskCalculatorModal 
         isOpen={isCalculatorOpen} 
         onClose={() => setIsCalculatorOpen(false)} 
+      />
+
+      {/* Mobile Bottom Navigation Bar (Visible on < 768px screens) */}
+      <MobileBottomNav 
+        activeTab={activeMainTab}
+        onSelectTab={(tab) => {
+          setActiveMainTab(tab);
+          setIsMobileSidebarOpen(false);
+        }}
+        onOpenMenu={() => setIsMobileSidebarOpen(prev => !prev)}
+        isMenuOpen={isMobileSidebarOpen}
       />
     </div>
   );

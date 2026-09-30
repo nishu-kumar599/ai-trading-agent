@@ -527,7 +527,7 @@ export const IPOSection = ({ onExecutePaperTrade }) => {
         </div>
       ) : (
         /* ================= IPO CARDS GRID ================= */
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(390px, 1fr))', gap: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 340px), 1fr))', gap: '20px' }}>
           {filteredIpos.map(ipo => {
             const isListed = ipo.status === 'LISTED';
             const isOpen = ipo.status === 'OPEN';

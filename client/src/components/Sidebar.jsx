@@ -14,7 +14,8 @@ import {
   ChevronRight, 
   Calculator, 
   BarChart3,
-  Rocket
+  Rocket,
+  X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -23,7 +24,9 @@ export const Sidebar = ({
   onSelectTab, 
   onOpenCalculator,
   isCollapsed = false,
-  onToggleCollapse
+  onToggleCollapse,
+  isMobileOpen = false,
+  onCloseMobile
 }) => {
   const { user, logout } = useAuth();
 
@@ -68,88 +71,123 @@ export const Sidebar = ({
   ];
 
   return (
-    <aside style={{
-      width: isCollapsed ? '72px' : '280px',
-      minWidth: isCollapsed ? '72px' : '280px',
-      height: '100vh',
-      position: 'sticky',
-      top: 0,
-      background: 'rgba(9, 9, 11, 0.98)',
-      backdropFilter: 'blur(20px)',
-      borderRight: '1px solid var(--border-subtle)',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'space-between',
-      zIndex: 100,
-      padding: isCollapsed ? '20px 8px' : '20px 16px',
-      transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1), padding 0.25s ease',
-      overflowX: 'hidden',
-      overflowY: 'auto'
-    }}>
-      <div>
-        {/* Brand Header & Collapse Toggle */}
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: isCollapsed ? 'center' : 'space-between', 
-          marginBottom: '24px', 
-          padding: isCollapsed ? '0' : '0 4px',
-          gap: '8px'
-        }}>
-          {!isCollapsed && (
-            <div className="brand-badge">
-              <div className="brand-icon-wrapper" style={{ width: '36px', height: '36px' }}>
+    <>
+      {/* Mobile Drawer Backdrop */}
+      {isMobileOpen && (
+        <div 
+          className="sidebar-backdrop" 
+          onClick={onCloseMobile}
+        />
+      )}
+
+      <aside className={`app-sidebar ${isMobileOpen ? 'mobile-open' : ''} ${isCollapsed ? 'collapsed' : ''}`} style={{
+        width: isCollapsed ? '72px' : '280px',
+        minWidth: isCollapsed ? '72px' : '280px',
+        height: '100vh',
+        position: 'sticky',
+        top: 0,
+        background: 'rgba(9, 9, 11, 0.98)',
+        backdropFilter: 'blur(20px)',
+        borderRight: '1px solid var(--border-subtle)',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        zIndex: 200,
+        padding: isCollapsed ? '20px 8px' : '20px 16px',
+        transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1), padding 0.25s ease',
+        overflowX: 'hidden',
+        overflowY: 'auto'
+      }}>
+        <div>
+          {/* Brand Header & Collapse Toggle */}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: isCollapsed ? 'center' : 'space-between', 
+            marginBottom: '24px', 
+            padding: isCollapsed ? '0' : '0 4px',
+            gap: '8px'
+          }}>
+            {!isCollapsed && (
+              <div className="brand-badge">
+                <div className="brand-icon-wrapper" style={{ width: '36px', height: '36px' }}>
+                  <TrendingUp size={20} />
+                </div>
+                <div className="brand-title" style={{ fontSize: '1.15rem' }}>
+                  AlphaTrade <span>AI</span>
+                </div>
+              </div>
+            )}
+
+            {isCollapsed && (
+              <div 
+                className="brand-icon-wrapper" 
+                style={{ width: '38px', height: '38px', cursor: 'pointer', marginBottom: '8px' }}
+                onClick={onToggleCollapse}
+                title="Expand Sidebar"
+              >
                 <TrendingUp size={20} />
               </div>
-              <div className="brand-title" style={{ fontSize: '1.15rem' }}>
-                AlphaTrade <span>AI</span>
-              </div>
-            </div>
-          )}
+            )}
 
-          {isCollapsed && (
-            <div 
-              className="brand-icon-wrapper" 
-              style={{ width: '38px', height: '38px', cursor: 'pointer', marginBottom: '8px' }}
-              onClick={onToggleCollapse}
-              title="Expand Sidebar"
-            >
-              <TrendingUp size={20} />
-            </div>
-          )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {/* Close Button on Mobile Drawer */}
+              {onCloseMobile && (
+                <button
+                  onClick={onCloseMobile}
+                  className="mobile-close-btn"
+                  type="button"
+                  title="Close Navigation"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.06)',
+                    border: '1px solid var(--border-subtle)',
+                    color: '#fff',
+                    borderRadius: '8px',
+                    padding: '6px',
+                    cursor: 'pointer',
+                    display: 'none',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <X size={18} />
+                </button>
+              )}
 
-          {/* Close / Collapse Sidebar Button */}
-          <button
-            onClick={onToggleCollapse}
-            type="button"
-            title={isCollapsed ? 'Expand Sidebar' : 'Close Sidebar'}
-            style={{
-              background: 'rgba(255, 255, 255, 0.04)',
-              border: '1px solid var(--border-subtle)',
-              color: 'var(--text-muted)',
-              borderRadius: '8px',
-              padding: '6px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.2s ease',
-              outline: 'none'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = '#fff';
-              e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.4)';
-              e.currentTarget.style.background = 'rgba(16, 185, 129, 0.1)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = 'var(--text-muted)';
-              e.currentTarget.style.borderColor = 'var(--border-subtle)';
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
-            }}
-          >
-            {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-          </button>
-        </div>
+              {/* Close / Collapse Sidebar Button for Desktop */}
+              <button
+                onClick={onToggleCollapse}
+                className="desktop-collapse-btn"
+                type="button"
+                title={isCollapsed ? 'Expand Sidebar' : 'Close Sidebar'}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.04)',
+                  border: '1px solid var(--border-subtle)',
+                  color: 'var(--text-muted)',
+                  borderRadius: '8px',
+                  padding: '6px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s ease',
+                  outline: 'none'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = '#fff';
+                  e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+                  e.currentTarget.style.background = 'rgba(16, 185, 129, 0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'var(--text-muted)';
+                  e.currentTarget.style.borderColor = 'var(--border-subtle)';
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+                }}
+              >
+                {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+              </button>
+            </div>
+          </div>
 
         {/* Navigation Groups */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: isCollapsed ? '12px' : '20px' }}>
@@ -176,7 +214,10 @@ export const Sidebar = ({
                   return (
                     <button
                       key={item.id}
-                      onClick={() => onSelectTab(item.id)}
+                      onClick={() => {
+                        onSelectTab(item.id);
+                        if (onCloseMobile) onCloseMobile();
+                      }}
                       title={`${item.label} • ${item.badge}`}
                       style={{
                         width: '100%',
@@ -260,7 +301,10 @@ export const Sidebar = ({
 
         {/* Risk & Sizing Calculator Trigger */}
         <button
-          onClick={onOpenCalculator}
+          onClick={() => {
+            onOpenCalculator();
+            if (onCloseMobile) onCloseMobile();
+          }}
           type="button"
           title="Risk & Lot Calculator"
           style={{
@@ -309,7 +353,10 @@ export const Sidebar = ({
           </div>
 
           <button
-            onClick={logout}
+            onClick={() => {
+              logout();
+              if (onCloseMobile) onCloseMobile();
+            }}
             title="Log Out"
             style={{
               background: 'rgba(239, 68, 68, 0.1)',
@@ -328,5 +375,6 @@ export const Sidebar = ({
         </div>
       </div>
     </aside>
+    </>
   );
 };

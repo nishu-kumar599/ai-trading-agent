@@ -258,15 +258,17 @@ export const PLCalendar = () => {
       </div>
 
       {/* Interactive Calendar Grid */}
-      <div className="signals-table-card" style={{ padding: '24px' }}>
-        {/* Days of week header */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(7, 1fr)',
-          gap: '10px',
-          marginBottom: '10px',
-          textAlign: 'center'
-        }}>
+      <div className="signals-table-card" style={{ padding: '20px' }}>
+        <div className="table-responsive" style={{ overflowX: 'auto' }}>
+          <div style={{ minWidth: '640px' }}>
+            {/* Days of week header */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(7, 1fr)',
+              gap: '10px',
+              marginBottom: '10px',
+              textAlign: 'center'
+            }}>
           {daysOfWeek.map((dayName, idx) => (
             <div key={idx} style={{
               fontSize: '0.78rem',
@@ -500,6 +502,8 @@ export const PLCalendar = () => {
           })}
         </div>
       </div>
+    </div>
+  </div>
 
       {/* Interactive Daily Trade Inspector Drawer / Modal */}
       {selectedDayTrades && (

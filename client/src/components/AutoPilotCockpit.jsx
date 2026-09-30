@@ -242,7 +242,7 @@ export const AutoPilotCockpit = () => {
       </div>
 
       {/* Accuracy & Quantitative Scorecard */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '14px' }}>
         {/* Win Rate */}
         <div style={{
           background: 'var(--bg-card)',
@@ -377,7 +377,7 @@ export const AutoPilotCockpit = () => {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: '12px' }}>
           {/* Intraday Long */}
           <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '14px' }}>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontWeight: 700 }}>INTRADAY BUY (LONG)</div>

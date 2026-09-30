@@ -188,7 +188,7 @@ export const TodayMarketAudit = () => {
           </span>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '12px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '12px' }}>
           {auditData?.verificationChecklist?.map((item, index) => (
             <div
               key={index}
@@ -241,7 +241,7 @@ export const TodayMarketAudit = () => {
             </div>
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
+          <div className="table-responsive" style={{ overflowX: 'auto' }}>
             <table className="signals-table">
               <thead>
                 <tr>

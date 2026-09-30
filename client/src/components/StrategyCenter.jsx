@@ -358,7 +358,7 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
           </button>
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
+        <div className="table-responsive" style={{ overflowX: 'auto' }}>
           <table className="signals-table">
             <thead>
               <tr>
@@ -660,7 +660,7 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
             No open positions. Select a signal above and click "Trade" to deploy a position with Profit-Lock Guard.
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
+          <div className="table-responsive" style={{ overflowX: 'auto' }}>
             <table className="signals-table">
               <thead>
                 <tr>
