@@ -1,0 +1,84 @@
+{
+  "isAutoPilotActive": true,
+  "maxConcurrentPositions": 4,
+  "virtualCapital": 100000,
+  "allocatedCapital": 0,
+  "lastScanTimestamp": 1790759640851,
+  "activePositions": [
+    {
+      "id": "auto_1790759372511_jpezqa",
+      "symbol": "M&M 2950 PE",
+      "baseSymbol": "M&M.NS",
+      "horizon": "F_AND_O",
+      "direction": "BUY_PUT",
+      "entryPrice": 73.59,
+      "currentPrice": 73.5,
+      "stopLoss": 55.19,
+      "target1": 106.71,
+      "target2": 147.18,
+      "quantity": 350,
+      "breakevenActivated": false,
+      "trailingPct": 0.05,
+      "unrealizedPL": -31.5,
+      "unrealizedPLPct": -0.12,
+      "status": "ACTIVE_RUNNING",
+      "openedAt": "2026-09-30T09:09:32.511Z",
+      "isAutonomous": true,
+      "score": 97,
+      "confidence": 91,
+      "rrRatio": 0.98,
+      "rationale": "High-conviction Bearish Plunge: Buying 2950 PE to exploit heavy breakdown.",
+      "ticksObserved": 110,
+      "underlyingSpotAtEntry": 2943.5
+    },
+    {
+      "id": "auto_1790759222071_nl9p8i",
+      "symbol": "MARUTI 11900 PE",
+      "baseSymbol": "MARUTI.NS",
+      "horizon": "F_AND_O",
+      "direction": "BUY_PUT",
+      "entryPrice": 297.43,
+      "currentPrice": 298.27,
+      "stopLoss": 223.07,
+      "target1": 431.27,
+      "target2": 594.86,
+      "quantity": 50,
+      "breakevenActivated": false,
+      "trailingPct": 0.05,
+      "unrealizedPL": 42,
+      "unrealizedPLPct": 0.28,
+      "status": "ACTIVE_RUNNING",
+      "openedAt": "2026-09-30T09:07:02.071Z",
+      "isAutonomous": true,
+      "score": 97,
+      "confidence": 91,
+      "rrRatio": 0.98,
+      "rationale": "High-conviction Bearish Plunge: Buying 11900 PE to exploit heavy breakdown.",
+      "ticksObserved": 111,
+      "underlyingSpotAtEntry": 11897
+    }
+  ],
+  "tradeHistory": [],
+  "decisionLogs": [
+    {
+      "id": "log_1790759372511_xogu",
+      "timestamp": "2026-09-30T09:09:32.511Z",
+      "displayTime": "02:39:32 pm",
+      "type": "EXECUTE",
+      "message": "Autonomous Order Placed: BUY_PUT M&M 2950 PE (350 Qty @ ₹73.59). Score: 97/100, R:R: 1:0.98. High-conviction Bearish Plunge: Buying 2950 PE to exploit heavy breakdown.",
+      "metadata": {
+        "positionId": "auto_1790759372511_jpezqa",
+        "symbol": "M&M 2950 PE",
+        "price": 73.59
+      }
+    },
+    {
+      "id": "log_1790759368243_dea7",
+      "timestamp": "2026-09-30T09:09:28.243Z",
+      "displayTime": "02:39:28 pm",
+      "type": "SYSTEM",
+      "message": "Autonomous AI Trading Agent engine booted in background mode.",
+      "metadata": null
+    }
+  ]
+}

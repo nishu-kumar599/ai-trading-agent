@@ -21,6 +21,7 @@ app.use('/api/strategies', require('./routes/strategies'));
 app.use('/api/sentiment', require('./routes/sentiment'));
 app.use('/api/ipo', require('./routes/ipo'));
 app.use('/api/market', require('./routes/market'));
+app.use('/api/ai-agent', require('./routes/aiAgent'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -68,4 +69,12 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🔗 API Base URL: http://localhost:${PORT}/api`);
   console.log(`🔑 Auth Endpoints: /api/auth/login, /api/auth/register, /api/auth/me`);
   console.log(`===========================================`);
+
+  // Start 24/7 Autonomous AI Trading Sentinel in the background
+  try {
+    const { startAutonomousAgent } = require('./services/aiAgentEngine');
+    startAutonomousAgent();
+  } catch (err) {
+    console.error('Failed to start Autonomous AI Agent:', err.message);
+  }
 });

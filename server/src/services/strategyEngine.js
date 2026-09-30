@@ -467,7 +467,30 @@ module.exports = {
   tickPosition,
   closePosition,
   resetTestSandbox,
-  getActivePositions: (quotes) => updateAndGetActivePositions(quotes),
-  getTradeHistory: () => tradeHistory
+  getActivePositions: (quotes) => {
+    const manualPositions = updateAndGetActivePositions(quotes);
+    try {
+      const { getActivePositions: getAiPositions } = require('./aiAgentEngine');
+      const aiPositions = getAiPositions() || [];
+      const map = new Map();
+      manualPositions.forEach(p => map.set(p.id, p));
+      aiPositions.forEach(p => map.set(p.id, p));
+      return Array.from(map.values());
+    } catch (e) {
+      return manualPositions;
+    }
+  },
+  getTradeHistory: () => {
+    try {
+      const { getTradeHistory: getAiHistory } = require('./aiAgentEngine');
+      const aiHistory = getAiHistory() || [];
+      const map = new Map();
+      tradeHistory.forEach(t => map.set(t.id, t));
+      aiHistory.forEach(t => map.set(t.id, t));
+      return Array.from(map.values());
+    } catch (e) {
+      return tradeHistory;
+    }
+  }
 };
 

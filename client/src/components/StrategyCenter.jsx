@@ -20,6 +20,7 @@ import {
   DollarSign,
   Sparkles
 } from 'lucide-react';
+import { AutoPilotCockpit } from './AutoPilotCockpit';
 
 export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs = false }) => {
   const [selectedHorizon, setSelectedHorizon] = useState(initialHorizon);
@@ -174,6 +175,9 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
           <div>{executionNotice}</div>
         </div>
       )}
+
+      {/* Autonomous AI Agent Cockpit & 24/7 Auto-Pilot */}
+      <AutoPilotCockpit />
 
       {/* 5-Horizon Navigation Tabs (Optional) */}
       {!hideInternalTabs && (
@@ -677,7 +681,23 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
                   return (
                     <tr key={pos.id}>
                       <td>
-                        <span className="symbol-badge">{pos.symbol}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span className="symbol-badge">{pos.symbol}</span>
+                          {pos.isAutonomous && (
+                            <span style={{
+                              fontSize: '0.64rem',
+                              fontWeight: 800,
+                              background: 'rgba(56, 189, 248, 0.15)',
+                              color: '#38bdf8',
+                              border: '1px solid rgba(56, 189, 248, 0.35)',
+                              padding: '1px 5px',
+                              borderRadius: '4px',
+                              letterSpacing: '0.5px'
+                            }}>
+                              AI
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td>
                         <span style={{ fontSize: '0.75rem', color: '#93c5fd' }}>{pos.horizon}</span>
