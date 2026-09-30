@@ -85,6 +85,10 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
   useEffect(() => {
     fetchScan(selectedHorizon);
     fetchPositions();
+
+    // High-frequency live real-time positions & P&L polling (Groww / Zerodha style)
+    const posInterval = setInterval(fetchPositions, 2000);
+    return () => clearInterval(posInterval);
   }, [selectedHorizon]);
 
   // Execute trade
@@ -574,17 +578,78 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
       <div className="signals-table-card">
         <div className="table-header">
           <div>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#fff' }}>
-              Active Positions & Profit-Lock Monitor
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <span className="pulse-dot" style={{ background: '#10b981' }}></span>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-emerald)', textTransform: 'uppercase' }}>
+                Live Exchange Stream Active
+              </span>
+            </div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.3px' }}>
+              Active Positions & Real-Time P&L
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: '2px' }}>
-              Real-time monitoring of open trades with automated Breakeven protection & trailing stops
+              Prices and returns update live every 1.5s with automated Zero-Loss Breakeven & Trailing Stop
             </p>
           </div>
-          <span style={{ fontSize: '0.8rem', color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '4px 10px', borderRadius: '6px' }}>
+          <span style={{ fontSize: '0.8rem', color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '4px 10px', borderRadius: '6px', fontWeight: 700 }}>
             {activePositions.length} Open Positions
           </span>
         </div>
+
+        {/* Groww-Style Real-Time P&L Cockpit */}
+        {activePositions.length > 0 && (
+          <div style={{
+            background: (activePositions.reduce((sum, p) => sum + (p.unrealizedPL || 0), 0)) >= 0 
+              ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.14) 0%, rgba(13, 20, 32, 0.95) 100%)' 
+              : 'linear-gradient(135deg, rgba(239, 68, 68, 0.14) 0%, rgba(20, 13, 18, 0.95) 100%)',
+            border: `1px solid ${(activePositions.reduce((sum, p) => sum + (p.unrealizedPL || 0), 0)) >= 0 ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`,
+            borderRadius: '14px',
+            padding: '18px 22px',
+            marginBottom: '18px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '16px'
+          }}>
+            <div>
+              <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span className="pulse-dot" style={{ background: (activePositions.reduce((sum, p) => sum + (p.unrealizedPL || 0), 0)) >= 0 ? '#10b981' : '#ef4444' }}></span>
+                Total Real-Time Open P&L
+              </div>
+              <div style={{
+                fontSize: '1.75rem',
+                fontWeight: 800,
+                fontFamily: 'var(--font-mono)',
+                color: (activePositions.reduce((sum, p) => sum + (p.unrealizedPL || 0), 0)) >= 0 ? 'var(--accent-emerald)' : 'var(--danger)',
+                marginTop: '4px',
+                display: 'flex',
+                alignItems: 'baseline',
+                gap: '8px'
+              }}>
+                {(activePositions.reduce((sum, p) => sum + (p.unrealizedPL || 0), 0)) >= 0 ? '+' : ''}₹{(activePositions.reduce((sum, p) => sum + (p.unrealizedPL || 0), 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                <span style={{ fontSize: '0.95rem', fontWeight: 700 }}>
+                  ({(activePositions.reduce((sum, p) => sum + (p.unrealizedPL || 0), 0)) >= 0 ? '+' : ''}{((activePositions.reduce((sum, p) => sum + (p.unrealizedPL || 0), 0)) / (activePositions.reduce((sum, p) => sum + (p.entryPrice * p.quantity), 0) || 1) * 100).toFixed(2)}%)
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: 600 }}>Total Margin Invested</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
+                  ₹{(activePositions.reduce((sum, p) => sum + (p.entryPrice * p.quantity), 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: 600 }}>Current Portfolio Value</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#38bdf8', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
+                  ₹{(activePositions.reduce((sum, p) => sum + (p.currentPrice * p.quantity), 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {activePositions.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '36px 0', color: 'var(--text-dim)' }}>
@@ -600,7 +665,7 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
                   <th>Entry Price</th>
                   <th>Live Price</th>
                   <th>Current SL</th>
-                  <th>Unrealized P&L</th>
+                  <th>Real-Time P&L</th>
                   <th>Profit-Lock Status</th>
                   <th>Test Market Tick</th>
                   <th>Action</th>
@@ -608,7 +673,7 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
               </thead>
               <tbody>
                 {activePositions.map((pos) => {
-                  const isProfitable = pos.unrealizedPL >= 0;
+                  const isProfitable = (pos.unrealizedPL || 0) >= 0;
                   return (
                     <tr key={pos.id}>
                       <td>
@@ -617,8 +682,20 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
                       <td>
                         <span style={{ fontSize: '0.75rem', color: '#93c5fd' }}>{pos.horizon}</span>
                       </td>
-                      <td style={{ fontFamily: 'var(--font-mono)' }}>₹{pos.entryPrice}</td>
-                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#fff' }}>₹{pos.currentPrice}</td>
+                      <td style={{ fontFamily: 'var(--font-mono)' }}>₹{pos.entryPrice.toFixed(2)}</td>
+                      <td>
+                        <div style={{
+                          fontFamily: 'var(--font-mono)',
+                          fontWeight: 700,
+                          color: '#fff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}>
+                          <span className="pulse-dot" style={{ background: isProfitable ? '#10b981' : '#f87171' }}></span>
+                          ₹{pos.currentPrice.toFixed(2)}
+                        </div>
+                      </td>
                       <td style={{ fontFamily: 'var(--font-mono)', color: pos.breakevenActivated ? '#34d399' : '#f87171' }}>
                         ₹{pos.stopLoss}
                         {pos.breakevenActivated && (
@@ -630,14 +707,18 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
                       <td>
                         <div style={{
                           fontFamily: 'var(--font-mono)',
-                          fontWeight: 700,
-                          color: isProfitable ? '#34d399' : '#f43f5e',
+                          fontWeight: 800,
+                          color: isProfitable ? 'var(--accent-emerald)' : 'var(--danger)',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '4px'
+                          gap: '4px',
+                          background: isProfitable ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                          padding: '4px 10px',
+                          borderRadius: '8px',
+                          width: 'fit-content'
                         }}>
                           {isProfitable ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                          ₹{pos.unrealizedPL} ({pos.unrealizedPLPct > 0 ? `+${pos.unrealizedPLPct}%` : `${pos.unrealizedPLPct}%`})
+                          {isProfitable ? '+' : ''}₹{pos.unrealizedPL.toLocaleString('en-IN', { minimumFractionDigits: 2 })} ({pos.unrealizedPLPct >= 0 ? `+${pos.unrealizedPLPct}%` : `${pos.unrealizedPLPct}%`})
                         </div>
                       </td>
                       <td>

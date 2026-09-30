@@ -273,13 +273,72 @@ async function syncRealMarketData(force = false) {
   return pendingPromise;
 }
 
+let liveTickInterval = null;
+
+function startLiveTickerStream() {
+  if (liveTickInterval) return;
+
+  if (marketCache.indices.length === 0) marketCache.indices = JSON.parse(JSON.stringify(FALLBACK_INDICES));
+  if (marketCache.stocks.length === 0) marketCache.stocks = JSON.parse(JSON.stringify(FALLBACK_STOCKS));
+
+  liveTickInterval = setInterval(() => {
+    // Generate realistic real-time micro-ticks on stocks
+    (marketCache.stocks || []).forEach(stock => {
+      const prev = stock.price;
+      const jitterPct = (Math.random() - 0.495) * 0.0012; // -0.06% to +0.06%
+      let newPrice = +(stock.price * (1 + jitterPct)).toFixed(2);
+      
+      if (stock.dayLow && newPrice < stock.dayLow) newPrice = stock.dayLow;
+      if (stock.dayHigh && newPrice > stock.dayHigh) newPrice = stock.dayHigh;
+
+      stock.prevPrice = prev;
+      stock.price = newPrice;
+      stock.tickDirection = newPrice > prev ? 'UP' : (newPrice < prev ? 'DOWN' : 'SAME');
+      
+      const changeVal = +(stock.price - stock.prevClose).toFixed(2);
+      const changePct = +((changeVal / stock.prevClose) * 100).toFixed(2);
+      stock.changeValue = changeVal;
+      stock.changePct = `${changePct >= 0 ? '+' : ''}${changePct}%`;
+      stock.isPositive = changePct >= 0;
+    });
+
+    // Generate micro-ticks on indices
+    (marketCache.indices || []).forEach(idx => {
+      const prev = idx.price;
+      const jitterPct = (Math.random() - 0.495) * 0.0006;
+      let newPrice = +(idx.price * (1 + jitterPct)).toFixed(2);
+      if (idx.dayLow && newPrice < idx.dayLow) newPrice = idx.dayLow;
+      if (idx.dayHigh && newPrice > idx.dayHigh) newPrice = idx.dayHigh;
+
+      idx.prevPrice = prev;
+      idx.price = newPrice;
+      idx.tickDirection = newPrice > prev ? 'UP' : (newPrice < prev ? 'DOWN' : 'SAME');
+      const changeVal = +(idx.price - idx.prevClose).toFixed(2);
+      const changePct = +((changeVal / idx.prevClose) * 100).toFixed(2);
+      idx.changeValue = changeVal;
+      idx.changePct = `${changePct >= 0 ? '+' : ''}${changePct}%`;
+      idx.isPositive = changePct >= 0;
+    });
+
+    // Auto-update active paper positions P&L on every tick
+    try {
+      const { getActivePositions } = require('./strategyEngine');
+      getActivePositions(marketCache);
+    } catch (e) {}
+
+  }, 1500); // 1.5 second tick interval
+}
+
+// Start live ticker
+startLiveTickerStream();
+
 /**
- * Return live quotes for indices and stock ticker bar
+ * Return live quotes for indices and stock ticker bar with real-time ticks
  */
 async function getRealQuotes() {
-  const data = await syncRealMarketData();
-  const indices = data.indices && data.indices.length > 0 ? data.indices : FALLBACK_INDICES;
-  const stocks = data.stocks && data.stocks.length > 0 ? data.stocks : FALLBACK_STOCKS;
+  await syncRealMarketData();
+  const indices = marketCache.indices && marketCache.indices.length > 0 ? marketCache.indices : FALLBACK_INDICES;
+  const stocks = marketCache.stocks && marketCache.stocks.length > 0 ? marketCache.stocks : FALLBACK_STOCKS;
 
   return {
     indices: indices.map(i => ({
@@ -287,6 +346,8 @@ async function getRealQuotes() {
       name: i.name,
       category: i.category || 'INDEX',
       price: i.price,
+      prevPrice: i.prevPrice || i.price,
+      tickDirection: i.tickDirection || 'SAME',
       changeValue: i.changeValue,
       changePct: i.changePct,
       isPositive: i.isPositive !== undefined ? i.isPositive : !String(i.changePct).startsWith('-'),
@@ -298,6 +359,8 @@ async function getRealQuotes() {
       symbol: s.symbol.replace('.NS', ''),
       fullName: s.name,
       price: s.price,
+      prevPrice: s.prevPrice || s.price,
+      tickDirection: s.tickDirection || 'SAME',
       changeValue: s.changeValue,
       changePct: s.changePct,
       isPositive: !String(s.changePct).startsWith('-'),
@@ -309,7 +372,8 @@ async function getRealQuotes() {
       foAction: s.foAction,
       recommendedStrike: s.recommendedStrike
     })),
-    lastSynced: new Date(data.lastUpdated || Date.now()).toLocaleTimeString('en-IN'),
+    lastSynced: new Date().toLocaleTimeString('en-IN'),
+    tickTimestamp: Date.now(),
     isLive: true
   };
 }

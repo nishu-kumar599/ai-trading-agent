@@ -94,7 +94,8 @@ export const Dashboard = () => {
   useEffect(() => {
     fetchAgentStatus();
     fetchRealDashboardData();
-    const interval = setInterval(fetchRealDashboardData, 30000);
+    // High-frequency 2-second real-time dashboard updates (Groww style)
+    const interval = setInterval(fetchRealDashboardData, 2000);
     return () => clearInterval(interval);
   }, []);
 

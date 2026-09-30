@@ -65,8 +65,8 @@ export const MarketTickerTape = ({ onSelectTicker }) => {
 
   useEffect(() => {
     fetchLiveQuotes();
-    // Poll real quotes every 35 seconds to stay synchronized with live exchange
-    const pollInterval = setInterval(fetchLiveQuotes, 35000);
+    // High-frequency 2.5-second live quotes polling for real-time price flickers (Groww style)
+    const pollInterval = setInterval(fetchLiveQuotes, 2500);
     return () => clearInterval(pollInterval);
   }, []);
 
