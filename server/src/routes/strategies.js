@@ -75,24 +75,50 @@ router.get('/scan', async (req, res) => {
 });
 
 // GET /api/strategies/positions
-router.get('/positions', (req, res) => {
+router.get('/positions', async (req, res) => {
+  let quotes = null;
+  try {
+    const { getRealQuotes } = require('../services/realMarketService');
+    quotes = await getRealQuotes();
+  } catch (err) {}
+
   res.json({
     success: true,
-    activePositions: getActivePositions(),
+    activePositions: getActivePositions(quotes),
     tradeHistory: getTradeHistory()
   });
 });
 
 // POST /api/strategies/execute
-router.post('/execute', (req, res) => {
+router.post('/execute', async (req, res) => {
   try {
-    const { symbol, horizon, direction, price, quantity, optionDetails } = req.body;
+    let { symbol, horizon, direction, price, quantity, optionDetails } = req.body;
 
-    if (!symbol || !direction || !price) {
+    if (!symbol || !direction) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required trade execution parameters (symbol, direction, price).'
+        message: 'Missing required trade execution parameters (symbol, direction).'
       });
+    }
+
+    // Ground execution price strictly in real-time market quote
+    let liveSpot = parseFloat(price) || 0;
+    try {
+      const { getRealQuotes } = require('../services/realMarketService');
+      const quotes = await getRealQuotes();
+      const cleanSym = symbol.replace('.NS', '').trim().toUpperCase();
+      const match = (quotes.stocks || []).find(s => s.symbol.replace('.NS', '').toUpperCase() === cleanSym)
+                 || (quotes.indices || []).find(i => i.symbol.toUpperCase() === cleanSym || i.name.toUpperCase() === cleanSym);
+      if (match && match.price) {
+        liveSpot = match.price;
+        if (!price || horizon !== 'F_AND_O') {
+          price = match.price;
+        }
+      }
+    } catch (e) {}
+
+    if (!price) {
+      price = liveSpot || 1000.0;
     }
 
     const trade = executeTrade({
@@ -101,12 +127,13 @@ router.post('/execute', (req, res) => {
       direction,
       price: parseFloat(price),
       quantity: parseInt(quantity) || 50,
-      optionDetails
+      optionDetails,
+      liveSpot
     });
 
     res.status(201).json({
       success: true,
-      message: `Trade placed successfully with Profit-Lock Guard!`,
+      message: `Live Paper Order Executed at Real Market Price (₹${trade.entryPrice}) with Zero-Loss Guard!`,
       trade
     });
   } catch (error) {

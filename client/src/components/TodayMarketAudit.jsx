@@ -126,11 +126,11 @@ export const TodayMarketAudit = () => {
             <DollarSign size={16} color="#10b981" />
           </div>
           <div className="stat-card-value" style={{ color: '#10b981' }}>
-            {summary?.totalRealizedProfit || '+₹16,720.00'}
+            {summary?.totalRealizedProfit ?? '₹0.00'}
           </div>
           <div className="stat-card-tag stat-tag-positive">
             <ArrowUpRight size={14} />
-            {summary?.netReturnPercentage || '+16.72%'} on ₹100k Capital
+            {summary?.netReturnPercentage ?? '0.00%'} on ₹100k Capital
           </div>
         </div>
 
@@ -140,10 +140,10 @@ export const TodayMarketAudit = () => {
             <ShieldCheck size={16} color="#06b6d4" />
           </div>
           <div className="stat-card-value">
-            {summary?.winRate || '100%'}
+            {summary?.winRate ?? '0.0%'}
           </div>
           <div className="stat-card-tag" style={{ color: '#38bdf8' }}>
-            {summary?.winningTrades || 5} Wins • {summary?.breakevenTrades || 1} Breakeven • 0 Losses
+            {summary?.winningTrades ?? 0} Wins • {summary?.breakevenTrades ?? 0} Breakeven • {summary?.losingTrades ?? 0} Losses
           </div>
         </div>
 
@@ -153,11 +153,11 @@ export const TodayMarketAudit = () => {
             <BarChart3 size={16} color="#f59e0b" />
           </div>
           <div className="stat-card-value">
-            {summary?.maxIntradayDrawdown || '0.35%'}
+            {summary?.maxIntradayDrawdown ?? '0.00%'}
           </div>
           <div className="stat-card-tag" style={{ color: '#10b981' }}>
             <CheckCircle2 size={14} />
-            Well within 1.0% institutional limit
+            Strict Risk Cap Active
           </div>
         </div>
 
@@ -167,11 +167,11 @@ export const TodayMarketAudit = () => {
             <Zap size={16} color="#6366f1" />
           </div>
           <div className="stat-card-value">
-            {summary?.sharpeRatio || '2.84'}
+            {summary?.sharpeRatio ?? '0.00'}
           </div>
           <div className="stat-card-tag stat-tag-positive">
             <Sparkles size={14} />
-            Institutional Grade Performance
+            {summary?.totalTrades > 0 ? 'Live Grounded Execution' : 'Standby Mode'}
           </div>
         </div>
       </div>
@@ -228,26 +228,35 @@ export const TodayMarketAudit = () => {
             </p>
           </div>
           <span className="badge-signal-buy">
-            {auditData?.trades?.length || 6} Trades Completed
+            {auditData?.trades?.length || 0} Trades Recorded
           </span>
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
-          <table className="signals-table">
-            <thead>
-              <tr>
-                <th>Time & ID</th>
-                <th>Symbol & Segment</th>
-                <th>Direction</th>
-                <th>Entry Price</th>
-                <th>Exit Price</th>
-                <th>Realized P&L</th>
-                <th>Status</th>
-                <th>Zero-Loss Protection Verification</th>
-              </tr>
-            </thead>
-            <tbody>
-              {auditData?.trades?.map((t) => {
+        {(!auditData?.trades || auditData.trades.length === 0) ? (
+          <div style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--text-dim)', fontSize: '0.88rem' }}>
+            <ShieldCheck size={28} color="var(--accent-emerald)" style={{ marginBottom: '8px', opacity: 0.8 }} />
+            <div>No live paper trades executed yet today.</div>
+            <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+              Place a paper order in Strategy Center or Quick Execution to begin real-time session audit.
+            </div>
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table className="signals-table">
+              <thead>
+                <tr>
+                  <th>Time & ID</th>
+                  <th>Symbol & Segment</th>
+                  <th>Direction</th>
+                  <th>Entry Price</th>
+                  <th>Exit Price</th>
+                  <th>Realized P&L</th>
+                  <th>Status</th>
+                  <th>Zero-Loss Protection Verification</th>
+                </tr>
+              </thead>
+              <tbody>
+                {auditData?.trades?.map((t) => {
                 const isWin = t.status === 'WIN';
                 const isBreakeven = t.status === 'BREAKEVEN';
 
@@ -302,7 +311,8 @@ export const TodayMarketAudit = () => {
             </tbody>
           </table>
         </div>
-      </div>
+      )}
     </div>
+  </div>
   );
 };

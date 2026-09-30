@@ -11,62 +11,11 @@
  * Automatically adjusts Stop-Loss to Breakeven when in profit and trails to lock gains.
  */
 
-// In-memory active paper positions
-let activePositions = [
-  {
-    id: 'pos_001',
-    symbol: 'RELIANCE.NS',
-    horizon: 'INTRADAY',
-    direction: 'BUY',
-    entryPrice: 2980.0,
-    currentPrice: 3018.5,
-    stopLoss: 2985.0, // Trailed above entry -> Guaranteed Profit!
-    target1: 3025.0,
-    target2: 3065.0,
-    quantity: 50,
-    breakevenActivated: true,
-    trailingPct: 0.008,
-    unrealizedPL: 1925.0,
-    unrealizedPLPct: 1.29,
-    status: 'PROFIT_LOCKED',
-    openedAt: new Date(Date.now() - 3600000).toISOString()
-  },
-  {
-    id: 'pos_002',
-    symbol: 'HDFCBANK.NS 1550 PE',
-    horizon: 'F_AND_O',
-    direction: 'BUY_PUT',
-    entryPrice: 36.5,
-    currentPrice: 48.2,
-    stopLoss: 37.0, // Trailed above entry price -> Risk Free!
-    target1: 52.0,
-    target2: 70.0,
-    quantity: 550, // 1 lot
-    breakevenActivated: true,
-    trailingPct: 0.05,
-    unrealizedPL: 6435.0,
-    unrealizedPLPct: 32.05,
-    status: 'PROFIT_LOCKED',
-    openedAt: new Date(Date.now() - 7200000).toISOString()
-  }
-];
+// In-memory active paper positions (starts clean, populated only by genuine real-time paper executions)
+let activePositions = [];
 
-// Closed trades history
-let tradeHistory = [
-  {
-    id: 'pos_000',
-    symbol: 'TCS.NS',
-    horizon: 'SHORT_TERM',
-    direction: 'BUY',
-    entryPrice: 4050.0,
-    exitPrice: 4180.0,
-    quantity: 30,
-    realizedPL: 3900.0,
-    realizedPLPct: 3.21,
-    exitReason: 'TARGET_1_TRAILING_STOP_HIT',
-    closedAt: new Date(Date.now() - 86400000).toISOString()
-  }
-];
+// Closed trades history (starts clean, populated only when real paper positions are closed)
+let tradeHistory = [];
 
 const STRATEGY_CATALOG = {
   INTRADAY: {
@@ -466,45 +415,49 @@ function closePosition(id) {
 }
 
 function resetTestSandbox() {
-  activePositions = [
-    {
-      id: 'pos_001',
-      symbol: 'RELIANCE.NS',
-      horizon: 'INTRADAY',
-      direction: 'BUY',
-      entryPrice: 2980.0,
-      currentPrice: 3018.5,
-      stopLoss: 2985.0,
-      target1: 3025.0,
-      target2: 3065.0,
-      quantity: 50,
-      breakevenActivated: true,
-      trailingPct: 0.008,
-      unrealizedPL: 1925.0,
-      unrealizedPLPct: 1.29,
-      status: 'PROFIT_LOCKED',
-      openedAt: new Date(Date.now() - 3600000).toISOString()
-    },
-    {
-      id: 'pos_002',
-      symbol: 'HDFCBANK.NS 1550 PE',
-      horizon: 'F_AND_O',
-      direction: 'BUY_PUT',
-      entryPrice: 36.5,
-      currentPrice: 48.2,
-      stopLoss: 37.0,
-      target1: 52.0,
-      target2: 70.0,
-      quantity: 550,
-      breakevenActivated: true,
-      trailingPct: 0.05,
-      unrealizedPL: 6435.0,
-      unrealizedPLPct: 32.05,
-      status: 'PROFIT_LOCKED',
-      openedAt: new Date(Date.now() - 7200000).toISOString()
-    }
-  ];
-  return { success: true, activePositions, balance: 100000 };
+  activePositions = [];
+  tradeHistory = [];
+  return { success: true, activePositions, tradeHistory, balance: 100000 };
+}
+
+function updateAndGetActivePositions(realQuotes = null) {
+  if (realQuotes && realQuotes.stocks && activePositions.length > 0) {
+    const stockMap = {};
+    (realQuotes.stocks || []).forEach(s => {
+      stockMap[s.symbol.toUpperCase()] = s;
+      stockMap[s.symbol.replace('.NS', '').toUpperCase()] = s;
+    });
+
+    activePositions.forEach(pos => {
+      const cleanSym = pos.symbol.replace('.NS', '').split(' ')[0].toUpperCase();
+      const quote = stockMap[cleanSym];
+      if (quote && quote.price) {
+        const isFO = pos.horizon === 'F_AND_O';
+        let currentMarketPrice = quote.price;
+        if (isFO) {
+          const spotMovePct = (quote.price - (pos.underlyingSpotAtEntry || quote.price)) / (pos.underlyingSpotAtEntry || quote.price);
+          const delta = pos.direction === 'BUY_CALL' ? 0.5 : -0.5;
+          const optChange = (pos.entryPrice * spotMovePct * delta * 5);
+          currentMarketPrice = Math.max(0.5, +(pos.entryPrice + optChange).toFixed(2));
+        }
+
+        pos.currentPrice = currentMarketPrice;
+        const isOptionBuyer = pos.direction === 'BUY_CALL' || pos.direction === 'BUY_PUT';
+        const isUpwardTrade = isOptionBuyer || pos.direction === 'BUY';
+        const priceDiff = isUpwardTrade ? (pos.currentPrice - pos.entryPrice) : (pos.entryPrice - pos.currentPrice);
+        pos.unrealizedPL = +(priceDiff * pos.quantity).toFixed(2);
+        pos.unrealizedPLPct = +((priceDiff / pos.entryPrice) * 100).toFixed(2);
+
+        // Breakeven Profit-Lock check
+        if (!pos.breakevenActivated && pos.unrealizedPLPct >= 1.0) {
+          pos.breakevenActivated = true;
+          pos.stopLoss = isUpwardTrade ? +(pos.entryPrice * 1.002).toFixed(2) : +(pos.entryPrice * 0.998).toFixed(2);
+          pos.status = 'PROFIT_LOCKED';
+        }
+      }
+    });
+  }
+  return activePositions;
 }
 
 module.exports = {
@@ -514,7 +467,7 @@ module.exports = {
   tickPosition,
   closePosition,
   resetTestSandbox,
-  getActivePositions: () => activePositions,
+  getActivePositions: (quotes) => updateAndGetActivePositions(quotes),
   getTradeHistory: () => tradeHistory
 };
 

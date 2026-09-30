@@ -1,37 +1,38 @@
 /**
- * Trading Calendar & Daily P&L Engine
- * Generates day-by-day P&L history, win streaks, and trade breakdowns
- * for the interactive P&L Calendar view.
+ * Trading Calendar & Daily P&L Engine (100% Real-Time Grounded)
+ * Dynamically aggregates executed paper trades from tradeHistory.
+ * No fake pre-populated historical profits.
  */
 
-function getMonthPLData(month = 9, year = 2026) {
-  // Days in September 2026 = 30 days
-  const daysInMonth = new Date(year, month, 0).getDate();
+const { getTradeHistory } = require('./strategyEngine');
+
+function getMonthPLData(month = null, year = null) {
+  const now = new Date();
+  const currentYear = year || now.getFullYear();
+  const currentMonth = month || (now.getMonth() + 1);
+  const currentDay = now.getDate();
+
+  const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
   const calendarDays = [];
 
-  // Historical performance data for the month leading up to today (Sep 28)
-  const historicalDailyReturns = {
-    1: { pl: 8450.0, trades: 4, winRate: 100, top: 'RELIANCE.NS (+₹4,200)' },
-    2: { pl: 12300.0, trades: 5, winRate: 100, top: 'INFY.NS (+₹5,100)' },
-    3: { pl: 9150.0, trades: 4, winRate: 75, top: 'TCS.NS (+₹4,600)' },
-    4: { pl: 14200.0, trades: 6, winRate: 100, top: 'HDFCBANK.NS 1540 PE (+₹7,200)' },
-    7: { pl: 11800.0, trades: 5, winRate: 80, top: 'ICICIBANK.NS (+₹4,800)' },
-    8: { pl: 7900.0, trades: 3, winRate: 100, top: 'M&M.NS (+₹3,900)' },
-    9: { pl: 16400.0, trades: 6, winRate: 100, top: 'RELIANCE 1200 CE (+₹8,400)' },
-    10: { pl: 10500.0, trades: 4, winRate: 100, top: 'INFY.NS (+₹4,300)' },
-    11: { pl: -1850.0, trades: 4, winRate: 25, top: 'Small Pullback (Breakeven SL protected)' },
-    14: { pl: 13200.0, trades: 5, winRate: 100, top: 'TCS.NS (+₹5,400)' },
-    15: { pl: 9800.0, trades: 4, winRate: 100, top: 'HDFCBANK.NS (+₹4,100)' },
-    16: { pl: 15600.0, trades: 6, winRate: 100, top: 'NIFTY 22800 CE (+₹7,800)' },
-    17: { pl: 11200.0, trades: 5, winRate: 80, top: 'RELIANCE.NS (+₹4,600)' },
-    18: { pl: 21400.0, trades: 7, winRate: 100, top: 'Multi-Breakout Surge (+₹9,200)' },
-    21: { pl: 8900.0, trades: 4, winRate: 100, top: 'ICICIBANK.NS (+₹3,600)' },
-    22: { pl: 12700.0, trades: 5, winRate: 100, top: 'M&M.NS (+₹4,800)' },
-    23: { pl: 10100.0, trades: 4, winRate: 100, top: 'INFY.NS (+₹4,200)' },
-    24: { pl: 14450.0, trades: 6, winRate: 100, top: 'RELIANCE.NS (+₹5,800)' },
-    25: { pl: 15800.0, trades: 5, winRate: 100, top: 'Pre-Weekend Gain (+₹15,800)' },
-    28: { pl: 9285.0, trades: 5, winRate: 100, top: 'Today (Live Session): Downward Put / Short (+₹9,285)' }
-  };
+  // Group actual user closed paper trades by day of the month
+  const tradeHistory = getTradeHistory();
+  const dayTradesMap = {};
+
+  tradeHistory.forEach(trade => {
+    const tradeDate = new Date(trade.closedAt || trade.openedAt || now);
+    if (tradeDate.getFullYear() === currentYear && (tradeDate.getMonth() + 1) === currentMonth) {
+      const d = tradeDate.getDate();
+      if (!dayTradesMap[d]) {
+        dayTradesMap[d] = {
+          trades: [],
+          pl: 0
+        };
+      }
+      dayTradesMap[d].trades.push(trade);
+      dayTradesMap[d].pl += (trade.realizedPL || 0);
+    }
+  });
 
   let totalNetPL = 0;
   let greenDays = 0;
@@ -40,16 +41,17 @@ function getMonthPLData(month = 9, year = 2026) {
   let bestDayPL = 0;
   let bestDayDate = '';
 
-  const currentTodayDay = 28; // Today is Sep 28, 2026
-
   for (let day = 1; day <= daysInMonth; day++) {
-    const dateObj = new Date(year, month - 1, day);
+    const dateObj = new Date(currentYear, currentMonth - 1, day);
     const dayOfWeek = dateObj.getDay(); // 0 = Sun, 6 = Sat
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    const isFuture = day > currentTodayDay;
+    const isToday = (currentYear === now.getFullYear() && currentMonth === (now.getMonth() + 1) && day === currentDay);
+    const isFuture = (currentYear === now.getFullYear() && currentMonth === (now.getMonth() + 1) && day > currentDay)
+                  || (currentYear > now.getFullYear())
+                  || (currentYear === now.getFullYear() && currentMonth > (now.getMonth() + 1));
 
-    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const dayData = historicalDailyReturns[day];
+    const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const dayData = dayTradesMap[day];
 
     if (isWeekend) {
       calendarDays.push({
@@ -74,9 +76,9 @@ function getMonthPLData(month = 9, year = 2026) {
         netPL: 0,
         tradesCount: 0
       });
-    } else if (dayData) {
+    } else if (dayData && dayData.trades.length > 0) {
       totalNetPL += dayData.pl;
-      totalTrades += dayData.trades;
+      totalTrades += dayData.trades.length;
 
       if (dayData.pl > 0) {
         greenDays++;
@@ -88,6 +90,10 @@ function getMonthPLData(month = 9, year = 2026) {
         redDays++;
       }
 
+      const wins = dayData.trades.filter(t => (t.realizedPL || 0) > 0).length;
+      const winRate = Math.round((wins / dayData.trades.length) * 100);
+      const topTrade = [...dayData.trades].sort((a, b) => (b.realizedPL || 0) - (a.realizedPL || 0))[0];
+
       calendarDays.push({
         date: dateStr,
         day,
@@ -95,25 +101,31 @@ function getMonthPLData(month = 9, year = 2026) {
         type: 'TRADING_DAY',
         status: dayData.pl >= 0 ? 'PROFIT' : 'LOSS',
         netPL: dayData.pl,
-        tradesCount: dayData.trades,
-        winRate: dayData.winRate,
-        topGainer: dayData.top,
-        isToday: day === currentTodayDay,
-        tradesList: [
-          { symbol: 'RELIANCE.NS', action: 'SELL', pl: Math.round(dayData.pl * 0.4), strategy: 'VWAP Momentum' },
-          { symbol: 'TCS.NS 2080 PE', action: 'BUY_PUT', pl: Math.round(dayData.pl * 0.35), strategy: 'Sentiment Break' },
-          { symbol: 'M&M.NS', action: 'BUY', pl: Math.round(dayData.pl * 0.25), strategy: '20/50 EMA Swing' }
-        ]
+        tradesCount: dayData.trades.length,
+        winRate,
+        topGainer: topTrade ? `${topTrade.symbol} (${topTrade.realizedPL >= 0 ? '+' : ''}₹${topTrade.realizedPL.toFixed(0)})` : 'Session Active',
+        isToday,
+        tradesList: dayData.trades.map(t => ({
+          symbol: t.symbol,
+          action: t.direction,
+          pl: t.realizedPL,
+          strategy: t.horizon
+        }))
       });
     } else {
+      // Trading day with 0 trades (genuine clean state)
       calendarDays.push({
         date: dateStr,
         day,
         dayOfWeek,
-        type: 'HOLIDAY',
-        status: 'HOLIDAY',
+        type: 'TRADING_DAY',
+        status: 'NO_TRADES',
         netPL: 0,
-        tradesCount: 0
+        tradesCount: 0,
+        winRate: 0,
+        topGainer: isToday ? 'Session Active (0 Trades Placed)' : 'No Trades Executed',
+        isToday,
+        tradesList: []
       });
     }
   }
@@ -121,25 +133,25 @@ function getMonthPLData(month = 9, year = 2026) {
   const tradingDaysSoFar = greenDays + redDays;
   const winRate = tradingDaysSoFar > 0 ? +((greenDays / tradingDaysSoFar) * 100).toFixed(1) : 0;
   const avgDailyPL = tradingDaysSoFar > 0 ? +(totalNetPL / tradingDaysSoFar).toFixed(2) : 0;
-  const firstDayDate = new Date(year, month - 1, 1);
+  const firstDayDate = new Date(currentYear, currentMonth - 1, 1);
   const firstDayOfWeekIndex = firstDayDate.getDay();
 
   return {
-    monthName: month === 9 ? 'September' : new Date(year, month - 1, 1).toLocaleString('default', { month: 'long' }),
-    monthNumber: month,
-    year,
+    monthName: new Date(currentYear, currentMonth - 1, 1).toLocaleString('en-US', { month: 'long' }),
+    monthNumber: currentMonth,
+    year: currentYear,
     firstDayOfWeekIndex,
     daysInMonth,
     summary: {
-      totalNetPL: `+₹${totalNetPL.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+      totalNetPL: `${totalNetPL >= 0 ? '+' : ''}₹${totalNetPL.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       netPLRaw: totalNetPL,
       totalTrades,
       greenDays,
       redDays,
       winRate: `${winRate}%`,
-      winStreak: '11 Days Active',
-      avgDailyPL: `+₹${avgDailyPL.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-      bestDay: `+₹${bestDayPL.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (${bestDayDate})`
+      winStreak: greenDays > 0 ? `${greenDays} Day${greenDays > 1 ? 's' : ''}` : '0 Days',
+      avgDailyPL: `${avgDailyPL >= 0 ? '+' : ''}₹${avgDailyPL.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+      bestDay: bestDayPL > 0 ? `+₹${bestDayPL.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (${bestDayDate})` : '—'
     },
     calendarDays
   };
