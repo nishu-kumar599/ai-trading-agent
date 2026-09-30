@@ -1,0 +1,40 @@
+{
+  "modelName": "reinforcement_v1",
+  "totalTradesAnalyzed": 1,
+  "consecutiveWins": 1,
+  "consecutiveLosses": 0,
+  "baseScoreThreshold": 80,
+  "learnedAccuracyRate": 100,
+  "weights": {
+    "rsiWeight": 12.25,
+    "vwapWeight": 12.3,
+    "emaWeight": 10,
+    "volumeWeight": 8.2,
+    "riskRewardMultiplier": 1
+  },
+  "segmentMultipliers": {
+    "INTRADAY": 1.03,
+    "F_AND_O": 1,
+    "SHORT_TERM": 1
+  },
+  "evolutionLogs": [
+    {
+      "timestamp": "2026-09-30T09:54:55.975Z",
+      "tradeId": "test_win_001",
+      "symbol": "RELIANCE",
+      "outcome": "WIN",
+      "pnl": 480.5,
+      "insight": "Profitable trade executed on RELIANCE (Net +₹480.50). Reinforcing VWAP & RSI confluence weights for INTRADAY.",
+      "weightAdjustment": "VWAP: 12.3, RSI: 12.25, Multiplier (INTRADAY): 1.03"
+    },
+    {
+      "timestamp": "2026-09-30T09:54:55.937Z",
+      "tradeId": "init_calibration",
+      "symbol": "SYSTEM_BOOT",
+      "outcome": "INITIALIZED",
+      "pnl": 0,
+      "insight": "AI Self-Learning Engine initialized. Quantitative baseline weights calibrated for Indian equities & F&O.",
+      "weightAdjustment": "RSI: 12.0, VWAP: 12.0, EMA: 10.0, Vol: 8.0"
+    }
+  ]
+}

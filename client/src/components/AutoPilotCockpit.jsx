@@ -15,7 +15,11 @@ import {
   Clock, 
   ArrowUpRight,
   ArrowDownRight,
-  Sparkles
+  Sparkles,
+  Database,
+  Brain,
+  Lock,
+  Coins
 } from 'lucide-react';
 
 export const AutoPilotCockpit = () => {
@@ -98,6 +102,9 @@ export const AutoPilotCockpit = () => {
   const isAutoPilotActive = agentData?.isAutoPilotActive;
   const decisionLogs = agentData?.decisionLogs || [];
   const segments = accuracy.segmentBreakdown || {};
+  const riskGuard = agentData?.riskGuard || {};
+  const learning = agentData?.learning || {};
+  const isMongoSynced = agentData?.isMongoSynced;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -116,7 +123,8 @@ export const AutoPilotCockpit = () => {
         gap: '20px'
       }}>
         <div style={{ maxWidth: '680px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+          {/* Status Badges Row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
             <span style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -134,17 +142,46 @@ export const AutoPilotCockpit = () => {
               {isAutoPilotActive ? 'AI AUTONOMOUS AGENT ACTIVE (24/7 AUTO-TRADE)' : 'AI AUTO-PILOT PAUSED'}
             </span>
 
-            <span style={{ fontSize: '0.78rem', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            {/* MongoDB Cloud Status */}
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              padding: '4px 10px',
+              borderRadius: '20px',
+              fontSize: '0.72rem',
+              fontWeight: 700,
+              background: isMongoSynced ? 'rgba(16, 185, 129, 0.15)' : 'rgba(148, 163, 184, 0.12)',
+              color: isMongoSynced ? 'var(--accent-emerald)' : '#94a3b8',
+              border: `1px solid ${isMongoSynced ? 'rgba(16, 185, 129, 0.3)' : 'rgba(148, 163, 184, 0.2)'}`
+            }}>
+              <Database size={12} />
+              {isMongoSynced ? 'MongoDB Cloud Atlas Synced' : 'Local Storage Mode'}
+            </span>
+
+            {/* Market Close Auto-Squareoff */}
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              padding: '4px 10px',
+              borderRadius: '20px',
+              fontSize: '0.72rem',
+              fontWeight: 700,
+              background: 'rgba(56, 189, 248, 0.12)',
+              color: '#38bdf8',
+              border: '1px solid rgba(56, 189, 248, 0.25)'
+            }}>
               <Clock size={12} />
-              Evaluates every 2.5s across all segments
+              Auto-Squareoff @ 15:15 IST
             </span>
           </div>
 
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.5px', margin: '4px 0 8px 0' }}>
-            Autonomous Multi-Segment AI Trading Agent
+            Autonomous Multi-Segment AI Trading Sentinel
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: '1.5', margin: 0 }}>
-            Automatically scans <strong>Intraday (Long & Short Selling)</strong>, <strong>F&O Options (Calls & Puts)</strong>, and <strong>Swing Breakouts</strong>. It selects trades with highest probability of profit (Score ≥ 80, R:R ≥ 2.0), executes at genuine real-time market prices, snaps Stop-Loss to Breakeven at +1.0% profit, and auto-closes trades on target achievement.
+            Automatically scans <strong>Intraday (Long & Short Selling)</strong>, <strong>F&O Options (Calls & Puts)</strong>, and <strong>Swing Breakouts</strong>. It picks trades with highest probability of profit (Score ≥ {learning.baseScoreThreshold || 80}, R:R ≥ 2.0), enforces <strong>Anti-Overtrading & Brokerage Guard</strong>, snaps Stop-Loss to Breakeven at +1.0%, auto-squares off at 15:15 IST, and <strong>self-learns from every trade outcome</strong>.
           </p>
 
           {actionNotice && (
@@ -241,6 +278,86 @@ export const AutoPilotCockpit = () => {
         </div>
       </div>
 
+      {/* Anti-Overtrading & Brokerage Capital Guard Banner */}
+      <div style={{
+        background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%)',
+        border: '1px solid rgba(148, 163, 184, 0.2)',
+        borderRadius: '14px',
+        padding: '18px 22px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <ShieldCheck size={18} style={{ color: '#10b981' }} />
+            <h3 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#fff', margin: 0 }}>
+              Anti-Overtrading & Capital Guard
+            </h3>
+            <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+              Guarantees capital safety: limits position count, limits daily churn, and accounts for brokerage fees.
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{
+              fontSize: '0.72rem',
+              fontWeight: 700,
+              padding: '3px 8px',
+              borderRadius: '6px',
+              background: riskGuard.isCooldownActive ? 'rgba(245, 158, 11, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+              color: riskGuard.isCooldownActive ? '#fbbf24' : '#10b981',
+              border: `1px solid ${riskGuard.isCooldownActive ? 'rgba(245, 158, 11, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`
+            }}>
+              {riskGuard.isCooldownActive ? `Cooldown Active (${Math.ceil(riskGuard.cooldownRemainingSec / 60)}m left)` : 'Execution Cooldown: Ready'}
+            </span>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '12px' }}>
+          {/* Slot limit */}
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '12px 14px' }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 700 }}>ACTIVE POSITION SLOTS</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#fff', marginTop: '2px' }}>
+              {riskGuard.activePositionsCount || 0} / {riskGuard.maxConcurrentPositions || 2} Max
+            </div>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              Limits active risk to max 2 concurrent positions
+            </div>
+          </div>
+
+          {/* Daily limit */}
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '12px 14px' }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 700 }}>DAILY TRADES QUOTA</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#38bdf8', marginTop: '2px' }}>
+              {riskGuard.dailyTradesCount || 0} / {riskGuard.dailyTradeLimit || 5} Today
+            </div>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              Prevents excessive churning & transaction fees
+            </div>
+          </div>
+
+          {/* Capital Floor */}
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '12px 14px' }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 700 }}>70% CASH FLOOR RESERVE</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--accent-emerald)', marginTop: '2px' }}>
+              ₹{Number(riskGuard.minCashFloor || 70000).toLocaleString('en-IN')}
+            </div>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              Wallet cash floor strictly protected
+            </div>
+          </div>
+
+          {/* Brokerage deducted */}
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '12px 14px' }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 700 }}>BROKERAGE & TAXES</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#f59e0b', marginTop: '2px' }}>
+              ₹{riskGuard.brokeragePerTrade || 45}/trade
+            </div>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              ₹40 round-trip + ₹5 taxes factored in Net P&L
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Accuracy & Quantitative Scorecard */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '14px' }}>
         {/* Win Rate */}
@@ -276,7 +393,7 @@ export const AutoPilotCockpit = () => {
           </div>
         </div>
 
-        {/* Realized P&L */}
+        {/* Realized Net P&L */}
         <div style={{
           background: 'var(--bg-card)',
           border: `1px solid ${(accuracy.totalRealizedPL || 0) >= 0 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
@@ -288,7 +405,7 @@ export const AutoPilotCockpit = () => {
         }}>
           <div style={{ fontSize: '0.74rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
             <TrendingUp size={14} style={{ color: (accuracy.totalRealizedPL || 0) >= 0 ? 'var(--accent-emerald)' : 'var(--danger)' }} />
-            Net Realized Profit
+            Net Realized Profit (Post-Brokerage)
           </div>
           <div style={{
             fontSize: '2.1rem',
@@ -299,7 +416,7 @@ export const AutoPilotCockpit = () => {
             {(accuracy.totalRealizedPL || 0) >= 0 ? '+' : ''}₹{Number(accuracy.totalRealizedPL || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-            Gross Profit: +₹{Number(accuracy.grossProfit || 0).toFixed(2)} | Loss: ₹{Number(accuracy.grossLoss || 0).toFixed(2)}
+            Gross: +₹{Number(accuracy.totalGrossProfit || 0).toFixed(2)} | Brokerage/Taxes: -₹{Number(accuracy.totalBrokeragePaid || 0).toFixed(2)}
           </div>
         </div>
 
@@ -342,7 +459,7 @@ export const AutoPilotCockpit = () => {
         }}>
           <div style={{ fontSize: '0.74rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Activity size={14} style={{ color: '#a855f7' }} />
-            Active Slots & Capital
+            Virtual Capital Sandbox
           </div>
           <div style={{
             fontSize: '2.1rem',
@@ -350,11 +467,125 @@ export const AutoPilotCockpit = () => {
             fontFamily: 'var(--font-mono)',
             color: '#fff'
           }}>
-            {accuracy.openPositionsCount || 0} / {agentData?.maxConcurrentPositions || 4}
+            ₹{Number(accuracy.virtualCapital || 100000).toLocaleString('en-IN')}
           </div>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-            Available Sandbox Balance: ₹{Number(accuracy.virtualCapital || 100000).toLocaleString('en-IN')}
+            Invested: ₹{riskGuard.currentInvested || 0} | Free: ₹{riskGuard.freeCapital || 100000}
           </div>
+        </div>
+      </div>
+
+      {/* AI Self-Learning & Reinforcement Engine Panel */}
+      <div style={{
+        background: 'var(--bg-card)',
+        border: '1px solid rgba(168, 85, 247, 0.3)',
+        borderRadius: '14px',
+        padding: '20px 22px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+          <div>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Brain size={18} style={{ color: '#a855f7' }} />
+              AI Self-Learning & Reinforcement Calibration
+            </h3>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
+              The AI model analyzes every closed trade, reinforces winning indicator patterns (VWAP, RSI, Volume), and tightens rules on losses to maximize future precision.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '0.74rem', color: '#a855f7', fontWeight: 700, background: 'rgba(168, 85, 247, 0.12)', padding: '4px 10px', borderRadius: '8px', border: '1px solid rgba(168, 85, 247, 0.25)' }}>
+              Trades Analyzed: {learning.totalTradesAnalyzed || 0}
+            </span>
+            <span style={{ fontSize: '0.74rem', color: '#38bdf8', fontWeight: 700, background: 'rgba(56, 189, 248, 0.12)', padding: '4px 10px', borderRadius: '8px', border: '1px solid rgba(56, 189, 248, 0.25)' }}>
+              Score Filter: ≥{learning.baseScoreThreshold || 80}/100
+            </span>
+          </div>
+        </div>
+
+        {/* Current Learned Indicator Weights */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))', gap: '10px', marginBottom: '14px' }}>
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', padding: '10px 12px' }}>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 700 }}>VWAP WEIGHT</div>
+            <div style={{ fontSize: '1.15rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#38bdf8', marginTop: '2px' }}>
+              {learning.weights?.vwapWeight || 12.0} / 22
+            </div>
+            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Institutional flow anchor</div>
+          </div>
+
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', padding: '10px 12px' }}>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 700 }}>RSI SWEET-SPOT</div>
+            <div style={{ fontSize: '1.15rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--accent-emerald)', marginTop: '2px' }}>
+              {learning.weights?.rsiWeight || 12.0} / 22
+            </div>
+            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Momentum velocity</div>
+          </div>
+
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', padding: '10px 12px' }}>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 700 }}>VOLUME SURGE</div>
+            <div style={{ fontSize: '1.15rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#f59e0b', marginTop: '2px' }}>
+              {learning.weights?.volumeWeight || 8.0} / 18
+            </div>
+            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Liquidity breakout boost</div>
+          </div>
+
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', padding: '10px 12px' }}>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 700 }}>INTRADAY MULTIPLIER</div>
+            <div style={{ fontSize: '1.15rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#ec4899', marginTop: '2px' }}>
+              {learning.segmentMultipliers?.INTRADAY || 1.0}x
+            </div>
+            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Dynamic segment bias</div>
+          </div>
+
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', padding: '10px 12px' }}>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 700 }}>F&O OPTION MULTIPLIER</div>
+            <div style={{ fontSize: '1.15rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#a855f7', marginTop: '2px' }}>
+              {learning.segmentMultipliers?.F_AND_O || 1.0}x
+            </div>
+            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Asymmetric delta weighting</div>
+          </div>
+        </div>
+
+        {/* Learning History Feed */}
+        <div style={{ fontSize: '0.74rem', color: 'var(--text-dim)', fontWeight: 700, marginBottom: '8px' }}>
+          RECENT LEARNING EVOLUTION LOGS
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {(learning.recentEvolutionLogs || []).length === 0 ? (
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', padding: '10px' }}>
+              Model waiting for trade outcomes to calibrate weights.
+            </div>
+          ) : (
+            (learning.recentEvolutionLogs || []).slice(0, 3).map((item, idx) => (
+              <div key={idx} style={{
+                background: 'rgba(255, 255, 255, 0.02)',
+                border: '1px solid rgba(255, 255, 255, 0.05)',
+                borderRadius: '6px',
+                padding: '8px 12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '0.78rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{
+                    fontSize: '0.65rem',
+                    fontWeight: 800,
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    background: item.outcome === 'WIN' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(148, 163, 184, 0.15)',
+                    color: item.outcome === 'WIN' ? 'var(--accent-emerald)' : '#94a3b8'
+                  }}>
+                    {item.outcome}
+                  </span>
+                  <span style={{ color: '#e2e8f0' }}>{item.insight}</span>
+                </div>
+                <span style={{ color: 'var(--text-dim)', fontSize: '0.7rem', fontFamily: 'var(--font-mono)' }}>
+                  {item.weightAdjustment}
+                </span>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
@@ -385,7 +616,7 @@ export const AutoPilotCockpit = () => {
               {segments.intradayLong?.winRatePct || 100}%
             </div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-              {segments.intradayLong?.total || 0} Trades • P&L: ₹{segments.intradayLong?.pl || 0}
+              {segments.intradayLong?.total || 0} Trades • Net P&L: ₹{segments.intradayLong?.pl || 0}
             </div>
           </div>
 
@@ -396,7 +627,7 @@ export const AutoPilotCockpit = () => {
               {segments.intradayShort?.winRatePct || 100}%
             </div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-              {segments.intradayShort?.total || 0} Trades • P&L: ₹{segments.intradayShort?.pl || 0}
+              {segments.intradayShort?.total || 0} Trades • Net P&L: ₹{segments.intradayShort?.pl || 0}
             </div>
           </div>
 
@@ -407,7 +638,7 @@ export const AutoPilotCockpit = () => {
               {segments.optionsCalls?.winRatePct || 100}%
             </div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-              {segments.optionsCalls?.total || 0} Trades • P&L: ₹{segments.optionsCalls?.pl || 0}
+              {segments.optionsCalls?.total || 0} Trades • Net P&L: ₹{segments.optionsCalls?.pl || 0}
             </div>
           </div>
 
@@ -418,7 +649,7 @@ export const AutoPilotCockpit = () => {
               {segments.optionsPuts?.winRatePct || 100}%
             </div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-              {segments.optionsPuts?.total || 0} Trades • P&L: ₹{segments.optionsPuts?.pl || 0}
+              {segments.optionsPuts?.total || 0} Trades • Net P&L: ₹{segments.optionsPuts?.pl || 0}
             </div>
           </div>
 
@@ -429,7 +660,7 @@ export const AutoPilotCockpit = () => {
               {segments.swingTrading?.winRatePct || 100}%
             </div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-              {segments.swingTrading?.total || 0} Trades • P&L: ₹{segments.swingTrading?.pl || 0}
+              {segments.swingTrading?.total || 0} Trades • Net P&L: ₹{segments.swingTrading?.pl || 0}
             </div>
           </div>
         </div>
@@ -449,7 +680,7 @@ export const AutoPilotCockpit = () => {
               Live Autonomous Decision Stream & Thought Process
             </h3>
             <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
-              Audit-grade log showing how the AI agent calculates probabilities, executes entries, locks profit at breakeven, and exits.
+              Audit-grade log showing how the AI agent calculates probabilities, enforces risk guards, executes entries, locks profit at breakeven, and exits.
             </p>
           </div>
           <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
@@ -485,6 +716,12 @@ export const AutoPilotCockpit = () => {
               } else if (log.type === 'STOP_LOSS') {
                 badgeColor = 'rgba(239, 68, 68, 0.15)';
                 textColor = '#f87171';
+              } else if (log.type === 'SQUARE_OFF') {
+                badgeColor = 'rgba(168, 85, 247, 0.2)';
+                textColor = '#c084fc';
+              } else if (log.type === 'RISK_GUARD') {
+                badgeColor = 'rgba(245, 158, 11, 0.2)';
+                textColor = '#fbbf24';
               }
 
               return (

@@ -48,7 +48,7 @@ router.post('/register', async (req, res) => {
     }
 
     // Check if user already exists
-    const existing = findUserByEmail(email);
+    const existing = await findUserByEmail(email);
     if (existing) {
       return res.status(409).json({
         success: false,
@@ -61,7 +61,7 @@ router.post('/register', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, salt);
 
     // Create user
-    const newUser = createUser({
+    const newUser = await createUser({
       name,
       email,
       passwordHash,
@@ -103,7 +103,7 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    const user = findUserByEmail(email);
+    const user = await findUserByEmail(email);
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -143,9 +143,9 @@ router.post('/login', async (req, res) => {
 });
 
 // GET /api/auth/me
-router.get('/me', authenticateToken, (req, res) => {
+router.get('/me', authenticateToken, async (req, res) => {
   try {
-    const user = findUserById(req.user.id);
+    const user = await findUserById(req.user.id);
     if (!user) {
       return res.status(404).json({
         success: false,

@@ -383,15 +383,33 @@ function tickPosition(id, newPrice) {
 
   if (isStoppedOut || isTarget2Hit) {
     pos.status = isTarget2Hit ? 'TARGET_2_ACHIEVED' : (pos.breakevenActivated ? 'CLOSED_WITH_LOCKED_PROFIT' : 'STOPPED_OUT');
-    // Move to history
-    tradeHistory.unshift({
+    const grossPL = pos.unrealizedPL;
+    const brokerageCharges = 45.0; // ₹40 round-trip + ₹5 taxes
+    const netRealizedPL = +(grossPL - brokerageCharges).toFixed(2);
+    const realizedPLPct = +((netRealizedPL / (pos.entryPrice * pos.quantity)) * 100).toFixed(2);
+    const outcome = netRealizedPL > 0 ? 'WIN' : (netRealizedPL === 0 ? 'BREAKEVEN' : 'LOSS');
+
+    const closed = {
       ...pos,
       exitPrice: pos.currentPrice,
-      realizedPL: pos.unrealizedPL,
-      realizedPLPct: pos.unrealizedPLPct,
+      grossPL,
+      brokerageCharges,
+      netRealizedPL,
+      realizedPL: netRealizedPL,
+      realizedPLPct,
+      outcome,
       closedAt: new Date().toISOString()
-    });
+    };
+
+    // Move to history
+    tradeHistory.unshift(closed);
     activePositions.splice(posIndex, 1);
+
+    // AI Self-Learning feedback
+    try {
+      const { recordTradeOutcome } = require('./aiLearningEngine');
+      recordTradeOutcome(closed);
+    } catch (e) {}
   }
 
   return pos;
@@ -402,15 +420,32 @@ function closePosition(id) {
   if (posIndex === -1) return null;
 
   const [pos] = activePositions.splice(posIndex, 1);
+  const grossPL = pos.unrealizedPL;
+  const brokerageCharges = 45.0;
+  const netRealizedPL = +(grossPL - brokerageCharges).toFixed(2);
+  const realizedPLPct = +((netRealizedPL / (pos.entryPrice * pos.quantity)) * 100).toFixed(2);
+  const outcome = netRealizedPL > 0 ? 'WIN' : (netRealizedPL === 0 ? 'BREAKEVEN' : 'LOSS');
+
   const closed = {
     ...pos,
     exitPrice: pos.currentPrice,
-    realizedPL: pos.unrealizedPL,
-    realizedPLPct: pos.unrealizedPLPct,
+    grossPL,
+    brokerageCharges,
+    netRealizedPL,
+    realizedPL: netRealizedPL,
+    realizedPLPct,
+    outcome,
     status: 'MANUALLY_CLOSED',
     closedAt: new Date().toISOString()
   };
   tradeHistory.unshift(closed);
+
+  // AI Self-Learning feedback
+  try {
+    const { recordTradeOutcome } = require('./aiLearningEngine');
+    recordTradeOutcome(closed);
+  } catch (e) {}
+
   return closed;
 }
 

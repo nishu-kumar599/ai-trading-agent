@@ -2,10 +2,12 @@ const express = require('express');
 const {
   getAgentStatus,
   getAccuracyMetrics,
+  getRiskGuardStatus,
   toggleAutoPilot,
   runAutonomousCycle,
   resetAgentSandbox
 } = require('../services/aiAgentEngine');
+const { getLearningStats } = require('../services/aiLearningEngine');
 
 const router = express.Router();
 
@@ -29,6 +31,32 @@ router.get('/accuracy', (req, res) => {
     res.json({
       success: true,
       accuracy
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// GET /api/ai-agent/learning-stats
+router.get('/learning-stats', (req, res) => {
+  try {
+    const learning = getLearningStats();
+    res.json({
+      success: true,
+      learning
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// GET /api/ai-agent/risk-guard
+router.get('/risk-guard', (req, res) => {
+  try {
+    const riskGuard = getRiskGuardStatus();
+    res.json({
+      success: true,
+      riskGuard
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -66,9 +94,9 @@ router.post('/trigger-scan', async (req, res) => {
 });
 
 // POST /api/ai-agent/reset-state
-router.post('/reset-state', (req, res) => {
+router.post('/reset-state', async (req, res) => {
   try {
-    const result = resetAgentSandbox();
+    const result = await resetAgentSandbox();
     res.json(result);
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

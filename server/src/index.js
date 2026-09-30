@@ -63,17 +63,27 @@ if (fs.existsSync(clientDistPath)) {
 }
 
 // Start Server
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', async () => {
   console.log(`===========================================`);
   console.log(`🚀 AI Trading Agent Server running on port ${PORT}`);
   console.log(`🔗 API Base URL: http://localhost:${PORT}/api`);
   console.log(`🔑 Auth Endpoints: /api/auth/login, /api/auth/register, /api/auth/me`);
   console.log(`===========================================`);
 
+  // Initialize Dual-Mode Database (MongoDB Cloud + Local JSON fallback)
+  try {
+    const { connectDB } = require('./config/database');
+    const { syncUsersWithMongo } = require('./db');
+    await connectDB();
+    await syncUsersWithMongo();
+  } catch (dbErr) {
+    console.warn('DB initialization notice:', dbErr.message);
+  }
+
   // Start 24/7 Autonomous AI Trading Sentinel in the background
   try {
     const { startAutonomousAgent } = require('./services/aiAgentEngine');
-    startAutonomousAgent();
+    await startAutonomousAgent();
   } catch (err) {
     console.error('Failed to start Autonomous AI Agent:', err.message);
   }
