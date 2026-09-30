@@ -13,7 +13,8 @@ import {
   BarChart3,
   Lock,
   Layers,
-  Sparkles
+  Sparkles,
+  Download
 } from 'lucide-react';
 
 export const TodayMarketAudit = () => {
@@ -34,6 +35,60 @@ export const TodayMarketAudit = () => {
     } finally {
       setTimeout(() => setLoading(false), 400);
     }
+  };
+
+  const handleDownloadAuditCSV = () => {
+    const trades = auditData?.trades || [];
+    if (trades.length === 0) {
+      alert('No trades recorded in today session to export.');
+      return;
+    }
+
+    const headers = [
+      'Trade ID',
+      'Time',
+      'Symbol',
+      'Segment',
+      'Direction',
+      'Strategy',
+      'Entry Price (INR)',
+      'Exit Price (INR)',
+      'Quantity',
+      'Invested Amount (INR)',
+      'Realized P&L (INR)',
+      'Realized P&L %',
+      'Status',
+      'Exit Reason',
+      'Zero-Loss Protection Note'
+    ];
+
+    const rows = trades.map(t => [
+      `"${t.id || ''}"`,
+      `"${t.time || ''}"`,
+      `"${t.symbol || ''}"`,
+      `"${t.segment || ''}"`,
+      `"${t.direction || ''}"`,
+      `"${t.strategy || ''}"`,
+      t.entryPrice || 0,
+      t.exitPrice || 0,
+      t.quantity || 0,
+      t.investedAmount || 0,
+      t.realizedPL || 0,
+      t.realizedPLPct || 0,
+      `"${t.status || ''}"`,
+      `"${t.exitReason || ''}"`,
+      `"${(t.protectionNote || '').replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `today_market_audit_ledger_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   useEffect(() => {
@@ -93,24 +148,46 @@ export const TodayMarketAudit = () => {
             </div>
           </div>
 
-          <button
-            onClick={fetchAudit}
-            style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid var(--border-subtle)',
-              color: '#fff',
-              padding: '8px 16px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '0.82rem'
-            }}
-          >
-            <RefreshCw size={14} className={loading ? 'spinner' : ''} />
-            Re-Run Live Audit
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={fetchAudit}
+              style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid var(--border-subtle)',
+                color: '#fff',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '0.82rem'
+              }}
+            >
+              <RefreshCw size={14} className={loading ? 'spinner' : ''} />
+              Re-Run Live Audit
+            </button>
+
+            <button
+              onClick={handleDownloadAuditCSV}
+              style={{
+                background: 'rgba(16, 185, 129, 0.12)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                color: 'var(--accent-emerald)',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '0.82rem',
+                fontWeight: 700
+              }}
+            >
+              <Download size={14} />
+              Export Audit CSV
+            </button>
+          </div>
         </div>
       </div>
 

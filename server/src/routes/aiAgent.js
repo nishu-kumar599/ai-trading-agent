@@ -5,9 +5,12 @@ const {
   getRiskGuardStatus,
   toggleAutoPilot,
   runAutonomousCycle,
-  resetAgentSandbox
+  resetAgentSandbox,
+  panicSquareOffAll,
+  setRiskProfile
 } = require('../services/aiAgentEngine');
 const { getLearningStats } = require('../services/aiLearningEngine');
+const { getNotifications, clearNotifications } = require('../services/notificationService');
 
 const router = express.Router();
 
@@ -57,6 +60,53 @@ router.get('/risk-guard', (req, res) => {
     res.json({
       success: true,
       riskGuard
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// GET /api/ai-agent/notifications
+router.get('/notifications', (req, res) => {
+  try {
+    const notifications = getNotifications();
+    res.json({
+      success: true,
+      notifications
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST /api/ai-agent/panic-exit-all (1-Click Emergency Panic Square-off)
+router.post('/panic-exit-all', async (req, res) => {
+  try {
+    const result = await panicSquareOffAll();
+    const status = getAgentStatus();
+    res.json({
+      success: true,
+      message: result.message,
+      liquidatedCount: result.count,
+      totalNetPL: result.totalNetPL,
+      status
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST /api/ai-agent/risk-profile (Conservative, Balanced, Aggressive)
+router.post('/risk-profile', (req, res) => {
+  try {
+    const { profile } = req.body;
+    const result = setRiskProfile(profile);
+    const status = getAgentStatus();
+    res.json({
+      success: true,
+      message: `Risk Profile successfully updated to ${result.profile}.`,
+      profile: result.details,
+      status
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

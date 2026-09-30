@@ -19,14 +19,22 @@ import {
   Database,
   Brain,
   Lock,
-  Coins
+  Coins,
+  AlertTriangle,
+  Download,
+  LineChart,
+  Sliders,
+  Compass
 } from 'lucide-react';
+import { CandlestickModal } from './CandlestickModal';
 
 export const AutoPilotCockpit = () => {
   const [agentData, setAgentData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [actionNotice, setActionNotice] = useState('');
   const [triggeringScan, setTriggeringScan] = useState(false);
+  const [chartStock, setChartStock] = useState(null);
+  const [isPanicking, setIsPanicking] = useState(false);
 
   const fetchAgentStatus = async () => {
     try {
@@ -82,6 +90,111 @@ export const AutoPilotCockpit = () => {
     }
   };
 
+  // 1-Click Emergency Panic Square-off
+  const handlePanicSquareOffAll = async () => {
+    const activeCount = agentData?.activePositions?.length || 0;
+    if (activeCount === 0) {
+      alert('There are no active open positions to square off.');
+      return;
+    }
+
+    if (!window.confirm(`🚨 EMERGENCY CONFIRMATION:\n\nAre you sure you want to IMMEDIATELY square-off all ${activeCount} active positions at current live market spot price?`)) {
+      return;
+    }
+
+    setIsPanicking(true);
+    try {
+      const res = await fetch('/api/ai-agent/panic-exit-all', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setActionNotice(`🚨 Emergency Exit Complete: Liquidated ${data.liquidatedCount} positions. Net P&L: ₹${data.totalNetPL >= 0 ? '+' : ''}${data.totalNetPL.toFixed(2)}.`);
+        await fetchAgentStatus();
+      }
+    } catch (err) {
+      setActionNotice('Emergency exit failed: ' + err.message);
+    } finally {
+      setIsPanicking(false);
+      setTimeout(() => setActionNotice(''), 6000);
+    }
+  };
+
+  // Risk Profile Switcher
+  const handleSetRiskProfile = async (profile) => {
+    try {
+      const res = await fetch('/api/ai-agent/risk-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setActionNotice(data.message);
+        await fetchAgentStatus();
+      }
+    } catch (err) {
+      setActionNotice('Failed to update risk profile: ' + err.message);
+    } finally {
+      setTimeout(() => setActionNotice(''), 4000);
+    }
+  };
+
+  // Export Trade History & Audit Ledger to CSV
+  const handleExportCSV = () => {
+    const history = agentData?.tradeHistory || [];
+    if (history.length === 0) {
+      alert('No closed trades in history to export yet.');
+      return;
+    }
+
+    const headers = [
+      'Trade ID',
+      'Opened Time',
+      'Closed Time',
+      'Symbol',
+      'Segment',
+      'Direction',
+      'Entry Price (INR)',
+      'Exit Price (INR)',
+      'Quantity',
+      'Gross P&L (INR)',
+      'Brokerage & Tax (INR)',
+      'Net Realized P&L (INR)',
+      'Return %',
+      'Outcome',
+      'Exit Reason',
+      'Autonomous'
+    ];
+
+    const rows = history.map(t => [
+      `"${t.id || ''}"`,
+      `"${t.openedAt || ''}"`,
+      `"${t.closedAt || ''}"`,
+      `"${t.symbol || ''}"`,
+      `"${t.horizon || ''}"`,
+      `"${t.direction || ''}"`,
+      t.entryPrice || 0,
+      t.exitPrice || 0,
+      t.quantity || 0,
+      t.grossPL !== undefined ? t.grossPL : t.realizedPL || 0,
+      t.brokerageCharges !== undefined ? t.brokerageCharges : 45.0,
+      t.netRealizedPL !== undefined ? t.netRealizedPL : t.realizedPL || 0,
+      t.realizedPLPct || 0,
+      `"${t.outcome || (t.realizedPL > 0 ? 'WIN' : (t.realizedPL === 0 ? 'BREAKEVEN' : 'LOSS'))}"`,
+      `"${t.status || 'CLOSED'}"`,
+      `"${t.isAutonomous ? 'YES' : 'NO'}"`
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `ai_trading_ledger_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleReset = async () => {
     if (!window.confirm('Reset Autonomous AI Agent state, capital to ₹100,000, and clear trade logs?')) return;
     try {
@@ -104,10 +217,18 @@ export const AutoPilotCockpit = () => {
   const segments = accuracy.segmentBreakdown || {};
   const riskGuard = agentData?.riskGuard || {};
   const learning = agentData?.learning || {};
+  const marketRegime = agentData?.marketRegime || { regime: 'NEUTRAL', changePct: '0.00%', index: 'NIFTY 50' };
+  const currentRiskProfile = agentData?.riskProfile || 'BALANCED';
+  const activePositions = agentData?.activePositions || [];
   const isMongoSynced = agentData?.isMongoSynced;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      {/* Candlestick Modal */}
+      {chartStock && (
+        <CandlestickModal stock={chartStock} onClose={() => setChartStock(null)} />
+      )}
+
       {/* Top Banner: Auto-Pilot Command Center */}
       <div style={{
         background: isAutoPilotActive 
@@ -175,13 +296,30 @@ export const AutoPilotCockpit = () => {
               <Clock size={12} />
               Auto-Squareoff @ 15:15 IST
             </span>
+
+            {/* Two-Stage Profit Booking Badge */}
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              padding: '4px 10px',
+              borderRadius: '20px',
+              fontSize: '0.72rem',
+              fontWeight: 700,
+              background: 'rgba(168, 85, 247, 0.15)',
+              color: '#c084fc',
+              border: '1px solid rgba(168, 85, 247, 0.3)'
+            }}>
+              <Target size={12} />
+              Two-Stage Scale-Out Active
+            </span>
           </div>
 
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.5px', margin: '4px 0 8px 0' }}>
             Autonomous Multi-Segment AI Trading Sentinel
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: '1.5', margin: 0 }}>
-            Automatically scans <strong>Intraday (Long & Short Selling)</strong>, <strong>F&O Options (Calls & Puts)</strong>, and <strong>Swing Breakouts</strong>. It picks trades with highest probability of profit (Score ≥ {learning.baseScoreThreshold || 80}, R:R ≥ 2.0), enforces <strong>Anti-Overtrading & Brokerage Guard</strong>, snaps Stop-Loss to Breakeven at +1.0%, auto-squares off at 15:15 IST, and <strong>self-learns from every trade outcome</strong>.
+            Automatically scans <strong>Intraday (Long & Short Selling)</strong>, <strong>F&O Options (Calls & Puts)</strong>, and <strong>Swing Breakouts</strong>. It aligns with <strong>NIFTY 50 Market Regime</strong>, enforces <strong>Two-Stage Profit Booking (50% scale-out at Target 1)</strong>, guarantees Zero-Loss Breakeven protection, and <strong>self-learns from every trade outcome</strong>.
           </p>
 
           {actionNotice && (
@@ -204,8 +342,8 @@ export const AutoPilotCockpit = () => {
           )}
         </div>
 
-        {/* Action Controls */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: '220px' }}>
+        {/* Action Controls & Emergency Panic Squareoff */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '220px' }}>
           <button
             onClick={handleToggleAutoPilot}
             disabled={loading}
@@ -232,9 +370,10 @@ export const AutoPilotCockpit = () => {
             {isAutoPilotActive ? 'Pause Auto-Pilot' : 'Activate Auto-Pilot'}
           </button>
 
+          {/* 1-Click Emergency Panic Square-off */}
           <button
-            onClick={handleTriggerCycle}
-            disabled={triggeringScan}
+            onClick={handlePanicSquareOffAll}
+            disabled={isPanicking}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -242,17 +381,64 @@ export const AutoPilotCockpit = () => {
               gap: '6px',
               padding: '10px 16px',
               borderRadius: '8px',
-              fontWeight: 700,
-              fontSize: '0.84rem',
-              background: 'rgba(255, 255, 255, 0.08)',
-              color: '#fff',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
+              fontWeight: 800,
+              fontSize: '0.82rem',
+              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(185, 28, 28, 0.4) 100%)',
+              color: '#f87171',
+              border: '1px solid rgba(239, 68, 68, 0.5)',
               cursor: 'pointer'
             }}
           >
-            <Zap size={14} style={{ color: '#38bdf8' }} />
-            {triggeringScan ? 'Scanning...' : 'Trigger Scan Cycle'}
+            <AlertTriangle size={15} />
+            {isPanicking ? 'Emergency Liquidating...' : '🚨 Emergency Square Off All'}
           </button>
+
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={handleTriggerCycle}
+              disabled={triggeringScan}
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                fontWeight: 700,
+                fontSize: '0.78rem',
+                background: 'rgba(255, 255, 255, 0.08)',
+                color: '#fff',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                cursor: 'pointer'
+              }}
+            >
+              <Zap size={13} style={{ color: '#38bdf8' }} />
+              {triggeringScan ? 'Scanning...' : 'Trigger Scan'}
+            </button>
+
+            <button
+              onClick={handleExportCSV}
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                fontWeight: 700,
+                fontSize: '0.78rem',
+                background: 'rgba(255, 255, 255, 0.08)',
+                color: '#fff',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                cursor: 'pointer'
+              }}
+            >
+              <Download size={13} style={{ color: 'var(--accent-emerald)' }} />
+              Export CSV
+            </button>
+          </div>
 
           <button
             onClick={handleReset}
@@ -260,11 +446,11 @@ export const AutoPilotCockpit = () => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '6px',
-              padding: '6px 12px',
+              gap: '4px',
+              padding: '4px 8px',
               borderRadius: '6px',
               fontWeight: 600,
-              fontSize: '0.74rem',
+              fontSize: '0.72rem',
               background: 'transparent',
               color: 'var(--text-dim)',
               border: 'none',
@@ -272,9 +458,104 @@ export const AutoPilotCockpit = () => {
               textDecoration: 'underline'
             }}
           >
-            <RotateCcw size={12} />
+            <RotateCcw size={11} />
             Reset AI State & Balance
           </button>
+        </div>
+      </div>
+
+      {/* Market Regime Confluence & Risk Profile Bar */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
+        gap: '14px'
+      }}>
+        {/* Market Trend Regime */}
+        <div style={{
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-color)',
+          borderRadius: '14px',
+          padding: '16px 20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px'
+        }}>
+          <div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Compass size={14} style={{ color: '#38bdf8' }} />
+              MARKET REGIME CONFLUENCE (NIFTY 50)
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+              <span style={{
+                fontSize: '1.1rem',
+                fontWeight: 800,
+                fontFamily: 'var(--font-mono)',
+                color: marketRegime.regime === 'BULLISH' ? 'var(--accent-emerald)' : (marketRegime.regime === 'BEARISH' ? '#f87171' : '#fbbf24')
+              }}>
+                {marketRegime.regime} {marketRegime.changePct ? `(${marketRegime.changePct})` : ''}
+              </span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                {marketRegime.regime === 'BULLISH' ? 'Boosting BUY & Calls (+10 pts)' : (marketRegime.regime === 'BEARISH' ? 'Boosting SELL & Puts (+10 pts)' : 'Filtering breakouts only')}
+              </span>
+            </div>
+          </div>
+          <span style={{
+            padding: '4px 10px',
+            borderRadius: '8px',
+            fontSize: '0.7rem',
+            fontWeight: 800,
+            background: marketRegime.regime === 'BULLISH' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+            color: marketRegime.regime === 'BULLISH' ? 'var(--accent-emerald)' : '#f87171'
+          }}>
+            Regime Filter Active
+          </span>
+        </div>
+
+        {/* Risk Profile Switcher */}
+        <div style={{
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-color)',
+          borderRadius: '14px',
+          padding: '16px 20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+          flexWrap: 'wrap'
+        }}>
+          <div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Sliders size={14} style={{ color: '#a855f7' }} />
+              BOT RISK PROFILE MODE
+            </div>
+            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+              {currentRiskProfile === 'CONSERVATIVE' && '1 Pos • Score ≥84 • 80% Cash Floor'}
+              {currentRiskProfile === 'BALANCED' && '2 Pos • Score ≥80 • 70% Cash Floor (Default)'}
+              {currentRiskProfile === 'AGGRESSIVE' && '3 Pos • Score ≥76 • 60% Cash Floor'}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '6px' }}>
+            {['CONSERVATIVE', 'BALANCED', 'AGGRESSIVE'].map(p => (
+              <button
+                key={p}
+                onClick={() => handleSetRiskProfile(p)}
+                style={{
+                  padding: '6px 10px',
+                  borderRadius: '6px',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  border: currentRiskProfile === p ? '1px solid var(--accent-emerald)' : '1px solid rgba(255,255,255,0.1)',
+                  background: currentRiskProfile === p ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.04)',
+                  color: currentRiskProfile === p ? 'var(--accent-emerald)' : 'var(--text-muted)',
+                  cursor: 'pointer'
+                }}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -319,7 +600,7 @@ export const AutoPilotCockpit = () => {
               {riskGuard.activePositionsCount || 0} / {riskGuard.maxConcurrentPositions || 2} Max
             </div>
             <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Limits active risk to max 2 concurrent positions
+              Limits active risk to max {riskGuard.maxConcurrentPositions || 2} concurrent positions
             </div>
           </div>
 
@@ -336,7 +617,7 @@ export const AutoPilotCockpit = () => {
 
           {/* Capital Floor */}
           <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '12px 14px' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 700 }}>70% CASH FLOOR RESERVE</div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 700 }}>CASH FLOOR RESERVE</div>
             <div style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--accent-emerald)', marginTop: '2px' }}>
               ₹{Number(riskGuard.minCashFloor || 70000).toLocaleString('en-IN')}
             </div>
@@ -357,6 +638,143 @@ export const AutoPilotCockpit = () => {
           </div>
         </div>
       </div>
+
+      {/* Active Running Positions Section (With Live Chart Trigger & Two-Stage indicator) */}
+      {activePositions.length > 0 && (
+        <div style={{
+          background: 'var(--bg-card)',
+          border: '1px solid rgba(56, 189, 248, 0.3)',
+          borderRadius: '14px',
+          padding: '20px 22px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className="pulse-dot" style={{ background: '#38bdf8' }}></span>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff', margin: 0 }}>
+                Active Live Positions ({activePositions.length})
+              </h3>
+            </div>
+            <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+              Monitored on every live price tick
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {activePositions.map((pos) => {
+              const isProfit = (pos.unrealizedPL || 0) >= 0;
+              return (
+                <div
+                  key={pos.id}
+                  style={{
+                    background: 'rgba(255,255,255,0.02)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    borderRadius: '10px',
+                    padding: '14px 18px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '12px'
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fff' }}>
+                        {pos.symbol}
+                      </span>
+                      <span style={{
+                        fontSize: '0.68rem',
+                        fontWeight: 800,
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        background: pos.direction.includes('BUY') ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                        color: pos.direction.includes('BUY') ? 'var(--accent-emerald)' : '#f87171'
+                      }}>
+                        {pos.direction}
+                      </span>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
+                        {pos.horizon} • Qty: {pos.quantity}
+                      </span>
+
+                      {pos.partialProfitTaken && (
+                        <span style={{
+                          fontSize: '0.66rem',
+                          fontWeight: 800,
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          background: 'rgba(168, 85, 247, 0.2)',
+                          color: '#c084fc',
+                          border: '1px solid rgba(168, 85, 247, 0.3)'
+                        }}>
+                          🎯 T1 Banked (50%)
+                        </span>
+                      )}
+
+                      {pos.breakevenActivated && (
+                        <span style={{
+                          fontSize: '0.66rem',
+                          fontWeight: 800,
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          background: 'rgba(16, 185, 129, 0.2)',
+                          color: 'var(--accent-emerald)',
+                          border: '1px solid rgba(16, 185, 129, 0.3)'
+                        }}>
+                          🛡️ Zero-Loss Lock
+                        </span>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                      <span>Entry: <strong>₹{pos.entryPrice}</strong></span>
+                      <span>Live: <strong>₹{pos.currentPrice}</strong></span>
+                      <span>SL: <strong style={{ color: '#f87171' }}>₹{pos.stopLoss}</strong></span>
+                      <span>Target 1: <strong style={{ color: '#34d399' }}>₹{pos.target1}</strong></span>
+                      <span>Target 2: <strong style={{ color: '#10b981' }}>₹{pos.target2}</strong></span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{
+                        fontSize: '1.25rem',
+                        fontWeight: 800,
+                        fontFamily: 'var(--font-mono)',
+                        color: isProfit ? 'var(--accent-emerald)' : 'var(--danger)'
+                      }}>
+                        {isProfit ? '+' : ''}₹{pos.unrealizedPL || 0}
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: isProfit ? 'var(--accent-emerald)' : 'var(--danger)' }}>
+                        {isProfit ? '+' : ''}{pos.unrealizedPLPct || 0}%
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setChartStock(pos)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        padding: '7px 12px',
+                        borderRadius: '8px',
+                        background: 'rgba(56, 189, 248, 0.12)',
+                        color: '#38bdf8',
+                        border: '1px solid rgba(56, 189, 248, 0.3)',
+                        fontSize: '0.76rem',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <LineChart size={14} />
+                      View Chart
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Accuracy & Quantitative Scorecard */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '14px' }}>
@@ -722,6 +1140,9 @@ export const AutoPilotCockpit = () => {
               } else if (log.type === 'RISK_GUARD') {
                 badgeColor = 'rgba(245, 158, 11, 0.2)';
                 textColor = '#fbbf24';
+              } else if (log.type === 'PANIC_EXIT') {
+                badgeColor = 'rgba(239, 68, 68, 0.25)';
+                textColor = '#ef4444';
               }
 
               return (

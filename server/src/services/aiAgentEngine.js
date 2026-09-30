@@ -7,18 +7,18 @@
  *    - Intraday Momentum (Long BUY & Short-Selling SELL)
  *    - F&O Options Precision (ATM Call CE / Put PE Buying)
  *    - Short-Term Swing Breakouts
- * 3. AI Self-Learning & Reinforcement Engine:
- *    - Integrates learned indicator weights & score calibrations from aiLearningEngine.
- *    - Continually improves setup selection accuracy from real trade outcomes.
- * 4. Anti-Overtrading & Brokerage Guard:
- *    - Max 2 concurrent positions (prevents capital fragmentation).
- *    - Max 5 trades per day quota.
- *    - 10-minute cooldown between executions to prevent whipsaw overtrading.
- *    - 70% cash floor protection (never commits >30% wallet capital).
- *    - Realistic brokerage & tax accounting (₹40 round-trip + ₹5 taxes = ₹45 per trade).
- * 5. Market Close Auto-Square-off (15:15 IST):
- *    - Automatically closes all open Intraday trades at 15:15 IST without browser open.
- * 6. Dual-Mode MongoDB Cloud + Local JSON Persistence.
+ * 3. Market Trend Alignment Filter (Index Regime Confluence with NIFTY 50 / BANK NIFTY):
+ *    - Prioritizes setups aligned with the broader market direction; penalizes counter-trend setups.
+ * 4. Two-Stage Profit Booking (50% scale-out at Target 1 + Free-Ride Target 2):
+ *    - Automatically banks 50% profit at Target 1 and locks stop-loss of remaining 50% to entry.
+ * 5. Anti-Overtrading & Brokerage Guard:
+ *    - Max concurrent positions, daily trade limits, cooldowns, and 70% cash floor.
+ *    - Realistic brokerage (₹45 round-trip) accounted for on every trade.
+ * 6. 1-Click Emergency Panic Square-off:
+ *    - Liquidates all open positions at spot prices in under 0.5s.
+ * 7. Dynamic Risk Profile Switcher (Conservative, Balanced, Aggressive).
+ * 8. Real-time Telegram and In-App Alert Notifications.
+ * 9. Dual-Mode MongoDB Cloud + Local JSON Persistence.
  */
 
 const fs = require('fs');
@@ -31,24 +31,63 @@ const {
   getLearningStats,
   getBaseScoreThreshold 
 } = require('./aiLearningEngine');
+const { dispatchAlert } = require('./notificationService');
 
 const STATE_FILE_PATH = path.join(__dirname, '../../data/agent_state.json');
 
 // Indian Brokerage & Statutory Taxes per round-trip trade
 const ROUND_TRIP_BROKERAGE_TAXES = 45.00; // ₹20 entry + ₹20 exit + ₹5 STT/GST/Exchange fee
 
+// Risk Profile Definitions
+const RISK_PROFILES = {
+  CONSERVATIVE: {
+    name: 'CONSERVATIVE',
+    maxConcurrentPositions: 1,
+    baseScoreThreshold: 84,
+    minCashReserveRatio: 0.80,
+    riskPerTradePct: 0.01, // 1%
+    dailyTradeLimit: 3,
+    description: 'High selectivity: max 1 position, strict Score ≥ 84, 80% cash floor.'
+  },
+  BALANCED: {
+    name: 'BALANCED',
+    maxConcurrentPositions: 2,
+    baseScoreThreshold: 80,
+    minCashReserveRatio: 0.70,
+    riskPerTradePct: 0.02, // 2%
+    dailyTradeLimit: 5,
+    description: 'Optimal balance: max 2 positions, Score ≥ 80, 70% cash floor.'
+  },
+  AGGRESSIVE: {
+    name: 'AGGRESSIVE',
+    maxConcurrentPositions: 3,
+    baseScoreThreshold: 76,
+    minCashReserveRatio: 0.60,
+    riskPerTradePct: 0.03, // 3%
+    dailyTradeLimit: 8,
+    description: 'Maximum frequency: max 3 positions, Score ≥ 76, 60% cash floor.'
+  }
+};
+
 let state = {
   isAutoPilotActive: true,
-  maxConcurrentPositions: 2, // User safety: strictly limit to 2 simultaneous trades
-  dailyTradeLimit: 5,        // User safety: max 5 trades per day
+  riskProfile: 'BALANCED',
+  maxConcurrentPositions: 2,
+  dailyTradeLimit: 5,
   dailyTradesCount: 0,
   lastTradeDate: new Date().toISOString().split('T')[0],
   lastTradeTimestamp: 0,
-  tradeCooldownMs: 10 * 60 * 1000, // 10 minutes cooldown between new trades
-  minCashReserveRatio: 0.70,        // 70% cash floor reserve
+  tradeCooldownMs: 10 * 60 * 1000,
+  minCashReserveRatio: 0.70,
   virtualCapital: 100000,
   allocatedCapital: 0,
   lastScanTimestamp: 0,
+  marketRegime: {
+    index: 'NIFTY 50',
+    regime: 'NEUTRAL',
+    changePct: '0.00%',
+    confluenceNote: 'Evaluating market breadth'
+  },
   activePositions: [],
   tradeHistory: [],
   decisionLogs: []
@@ -73,10 +112,44 @@ function checkDailyReset() {
   }
 }
 
+// Detect Market Index Regime (NIFTY 50 & BANK NIFTY Confluence)
+function detectMarketRegime(quotes) {
+  if (!quotes || !quotes.indices || quotes.indices.length === 0) {
+    return state.marketRegime;
+  }
+
+  const nifty = quotes.indices.find(i => i.symbol === '^NSEI' || i.name.includes('NIFTY 50'));
+  if (nifty) {
+    const changePctNum = parseFloat(nifty.changePct) || 0;
+    let regime = 'NEUTRAL';
+    let note = '';
+
+    if (changePctNum >= 0.20 || (nifty.isPositive && changePctNum > 0)) {
+      regime = 'BULLISH';
+      note = 'NIFTY 50 is trending positive (+% & holding bids). Prioritizing BUY / Long / Call setups.';
+    } else if (changePctNum <= -0.20 || (!nifty.isPositive && changePctNum < 0)) {
+      regime = 'BEARISH';
+      note = 'NIFTY 50 is experiencing selling pressure (-% & down-trending). Prioritizing SELL / Short / Put setups.';
+    } else {
+      regime = 'NEUTRAL';
+      note = 'NIFTY 50 is trading rangebound. Filtering for high-conviction breakout setups only.';
+    }
+
+    state.marketRegime = {
+      index: 'NIFTY 50',
+      price: nifty.price,
+      changePct: nifty.changePct,
+      regime,
+      confluenceNote: note
+    };
+  }
+
+  return state.marketRegime;
+}
+
 // Load persisted state safely (MongoDB primary with local JSON fallback)
 async function loadPersistedState() {
   try {
-    // 1. Try MongoDB
     if (isMongoConnected()) {
       const AgentState = require('../models/AgentState');
       const Trade = require('../models/Trade');
@@ -85,6 +158,7 @@ async function loadPersistedState() {
       if (savedState) {
         state.isAutoPilotActive = savedState.isAutoPilotActive !== undefined ? savedState.isAutoPilotActive : state.isAutoPilotActive;
         state.virtualCapital = savedState.virtualCapital || state.virtualCapital;
+        state.riskProfile = savedState.riskProfile || 'BALANCED';
         state.maxConcurrentPositions = savedState.maxConcurrentPositions || 2;
         state.dailyTradeLimit = savedState.dailyTradeLimit || 5;
         state.dailyTradesCount = savedState.dailyTradesCount || 0;
@@ -95,14 +169,12 @@ async function loadPersistedState() {
         state.decisionLogs = savedState.decisionLogs || [];
       }
 
-      // Load active positions from DB
-      const activeFromDb = await Trade.find({ status: { $in: ['ACTIVE_RUNNING', 'PROFIT_LOCKED'] } }).lean();
+      const activeFromDb = await Trade.find({ status: { $in: ['ACTIVE_RUNNING', 'PROFIT_LOCKED', 'TARGET_1_PARTIAL_PROFIT'] } }).lean();
       if (activeFromDb && activeFromDb.length > 0) {
         state.activePositions = activeFromDb;
       }
 
-      // Load trade history from DB
-      const historyFromDb = await Trade.find({ status: { $nin: ['ACTIVE_RUNNING', 'PROFIT_LOCKED'] } })
+      const historyFromDb = await Trade.find({ status: { $nin: ['ACTIVE_RUNNING', 'PROFIT_LOCKED', 'TARGET_1_PARTIAL_PROFIT'] } })
         .sort({ closedAt: -1 })
         .limit(100)
         .lean();
@@ -114,7 +186,6 @@ async function loadPersistedState() {
       return;
     }
 
-    // 2. Local JSON fallback
     if (fs.existsSync(STATE_FILE_PATH)) {
       const raw = fs.readFileSync(STATE_FILE_PATH, 'utf8');
       const loaded = JSON.parse(raw);
@@ -135,12 +206,10 @@ async function loadPersistedState() {
 // Persist state safely (atomic write to JSON and async sync to MongoDB)
 async function persistState() {
   try {
-    // 1. Write to local disk
     const dir = path.dirname(STATE_FILE_PATH);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(STATE_FILE_PATH, JSON.stringify(state, null, 2), 'utf8');
 
-    // 2. Sync to MongoDB if connected
     if (isMongoConnected()) {
       const AgentState = require('../models/AgentState');
       const Trade = require('../models/Trade');
@@ -150,6 +219,7 @@ async function persistState() {
         {
           isAutoPilotActive: state.isAutoPilotActive,
           virtualCapital: state.virtualCapital,
+          riskProfile: state.riskProfile,
           maxConcurrentPositions: state.maxConcurrentPositions,
           dailyTradeLimit: state.dailyTradeLimit,
           dailyTradesCount: state.dailyTradesCount,
@@ -162,7 +232,6 @@ async function persistState() {
         { upsert: true, new: true }
       );
 
-      // Upsert active positions
       for (const pos of state.activePositions) {
         await Trade.findOneAndUpdate(
           { id: pos.id },
@@ -183,7 +252,7 @@ function addDecisionLog(type, message, metadata = null) {
     id: `log_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
     timestamp: new Date().toISOString(),
     displayTime: ist.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-    type, // 'SCAN', 'EXECUTE', 'PROFIT_LOCK', 'TARGET_HIT', 'STOP_LOSS', 'SQUARE_OFF', 'RISK_GUARD', 'SYSTEM'
+    type, // 'SCAN', 'EXECUTE', 'PROFIT_LOCK', 'TARGET_HIT', 'STOP_LOSS', 'SQUARE_OFF', 'RISK_GUARD', 'PANIC_EXIT', 'SYSTEM'
     message,
     metadata
   };
@@ -196,9 +265,12 @@ function addDecisionLog(type, message, metadata = null) {
 
 /**
  * Quantitative Probability Ranking Algorithm
- * Enhanced with learned reinforcement weights from aiLearningEngine
+ * Integrated with:
+ * 1. Technical Confluence (RSI, VWAP, EMA, Volume)
+ * 2. Market Trend Alignment Filter (NIFTY 50 Regime)
+ * 3. Self-Learning Weights from aiLearningEngine
  */
-function evaluateSetupProbability(stock, horizon) {
+function evaluateSetupProbability(stock, horizon, marketRegime = null) {
   const price = stock.price || 1000;
   const vwap = stock.vwap || price;
   const ema9 = stock.ema9 || price;
@@ -275,9 +347,9 @@ function evaluateSetupProbability(stock, horizon) {
     action = stock.shortTermSignal || 'HOLD';
     if (action === 'BUY') {
       isUpward = true;
-      stopLoss = +(price * 0.982).toFixed(2); // 1.8% SL
-      target1 = +(price * 1.035).toFixed(2);  // 3.5% T1
-      target2 = +(price * 1.070).toFixed(2);  // 7.0% T2
+      stopLoss = +(price * 0.982).toFixed(2);
+      target1 = +(price * 1.035).toFixed(2);
+      target2 = +(price * 1.070).toFixed(2);
       rationale = 'Multi-day swing breakout: 20/50 EMA dynamic bounce with expanding momentum.';
       
       if (price > ema9) score += 10;
@@ -303,6 +375,24 @@ function evaluateSetupProbability(stock, horizon) {
   if (rrRatio >= 1.8) score += 5;
   if (rrRatio >= 2.5) score += 5;
 
+  // Market Trend Alignment Filter (Index Regime Confluence)
+  const regime = marketRegime?.regime || state.marketRegime?.regime || 'NEUTRAL';
+  if (regime === 'BULLISH') {
+    if (action === 'BUY' || action === 'BUY_CALL') {
+      score += 10; // Boost aligned trades
+      rationale += ' Confluence: Aligned with Bullish NIFTY 50 market trend.';
+    } else if (action === 'SELL' || action === 'BUY_PUT') {
+      score -= 15; // Penalize fighting a bullish market
+    }
+  } else if (regime === 'BEARISH') {
+    if (action === 'SELL' || action === 'BUY_PUT') {
+      score += 10; // Boost aligned breakdown trades
+      rationale += ' Confluence: Aligned with Bearish NIFTY 50 breakdown trend.';
+    } else if (action === 'BUY' || action === 'BUY_CALL') {
+      score -= 15; // Penalize buying during market crashes
+    }
+  }
+
   // Apply Self-Learning dynamic calibration modifier
   const learnedModifier = getLearnedScoreModifier(stock, horizon);
   score += learnedModifier;
@@ -324,11 +414,13 @@ function evaluateSetupProbability(stock, horizon) {
     rationale,
     isUpward,
     stockData: stock,
+    marketRegime: regime,
     featuresAtEntry: {
       vwapAligned: isUpward ? price >= vwap : price <= vwap,
       rsiInSweetSpot: isUpward ? (rsi >= 50 && rsi <= 68) : (rsi >= 30 && rsi <= 48),
       volumeSurge: volumeRatio >= 1.25,
-      emaAligned: isUpward ? ema9 >= ema21 : ema9 <= ema21
+      emaAligned: isUpward ? ema9 >= ema21 : ema9 <= ema21,
+      marketAligned: (regime === 'BULLISH' && isUpward) || (regime === 'BEARISH' && !isUpward)
     }
   };
 }
@@ -336,14 +428,13 @@ function evaluateSetupProbability(stock, horizon) {
 /**
  * Scan all segments and pick highest profit-probability setups
  */
-async function scanMarketOpportunities() {
+async function scanMarketOpportunities(quotes = null) {
   const ist = getISTDateTime();
   const hours = ist.getHours();
   const minutes = ist.getMinutes();
   const day = ist.getDay();
   const isWeekday = day >= 1 && day <= 5;
 
-  // If market is about to close (after 15:00 IST) or closed, do not scan for new Intraday setups
   const isNearMarketClose = isWeekday && ((hours === 15 && minutes >= 0) || hours > 15 || hours < 9 || (hours === 9 && minutes < 15));
 
   const horizons = isNearMarketClose 
@@ -351,13 +442,14 @@ async function scanMarketOpportunities() {
     : ['INTRADAY', 'F_AND_O', 'SHORT_TERM'];
 
   const candidates = [];
-  const baseThreshold = getBaseScoreThreshold();
+  const baseThreshold = RISK_PROFILES[state.riskProfile]?.baseScoreThreshold || getBaseScoreThreshold();
+  const marketRegime = detectMarketRegime(quotes);
 
   for (const horizon of horizons) {
     try {
       const stocks = await getRealMarketUniverse(horizon);
       (stocks || []).forEach(stock => {
-        const evalResult = evaluateSetupProbability(stock, horizon);
+        const evalResult = evaluateSetupProbability(stock, horizon, marketRegime);
         if (['BUY', 'SELL', 'BUY_CALL', 'BUY_PUT'].includes(evalResult.action) && evalResult.score >= (baseThreshold - 2)) {
           candidates.push(evalResult);
         }
@@ -367,7 +459,6 @@ async function scanMarketOpportunities() {
     }
   }
 
-  // Sort by highest probability score and confidence
   candidates.sort((a, b) => b.score !== a.score ? b.score - a.score : b.confidence - a.confidence);
   return candidates;
 }
@@ -378,33 +469,27 @@ async function scanMarketOpportunities() {
 async function executeAutonomousTrade(candidate) {
   checkDailyReset();
 
-  // Guard 1: Concurrent Open Positions Limit (Max 2)
   if (state.activePositions.length >= state.maxConcurrentPositions) {
     return null;
   }
 
-  // Guard 2: Daily Trade Limit (Max 5 trades/day to protect capital from churn)
   if (state.dailyTradesCount >= state.dailyTradeLimit) {
     addDecisionLog('RISK_GUARD', `Anti-Overtrading Guard: Daily trade quota (${state.dailyTradesCount}/${state.dailyTradeLimit}) reached. Preserving wallet capital.`);
     return null;
   }
 
-  // Guard 3: Cooldown between executions (10 minutes)
   const timeSinceLastTrade = Date.now() - state.lastTradeTimestamp;
   if (timeSinceLastTrade < state.tradeCooldownMs) {
-    const minutesLeft = Math.ceil((state.tradeCooldownMs - timeSinceLastTrade) / 60000);
-    // Don't flood logs, just silently return
     return null;
   }
 
-  // Guard 4: Cash Reserve Floor (Must protect at least 70% of wallet capital)
   const minCashFloor = state.virtualCapital * state.minCashReserveRatio;
   const currentInvested = state.activePositions.reduce((sum, p) => sum + (p.entryPrice * p.quantity), 0);
   const isFO = candidate.horizon === 'F_AND_O';
   const entryPrice = isFO ? (candidate.stockData.optPremium || +(candidate.price * 0.025).toFixed(2)) : candidate.price;
   
-  // Dynamic position sizing: Risk 2% of capital (₹2,000)
-  const riskAmount = (state.virtualCapital || 100000) * 0.02;
+  const riskPct = RISK_PROFILES[state.riskProfile]?.riskPerTradePct || 0.02;
+  const riskAmount = (state.virtualCapital || 100000) * riskPct;
   const slDistance = Math.abs(entryPrice - candidate.stopLoss);
   let quantity = 50;
 
@@ -420,7 +505,6 @@ async function executeAutonomousTrade(candidate) {
     return null;
   }
 
-  // Check if position for same symbol and direction is already open
   const cleanSymbol = candidate.symbol.replace('.NS', '');
   const alreadyOpen = state.activePositions.some(p => 
     p.symbol.includes(cleanSymbol) && p.direction === candidate.action
@@ -442,7 +526,9 @@ async function executeAutonomousTrade(candidate) {
     stopLoss: +candidate.stopLoss.toFixed(2),
     target1: +candidate.target1.toFixed(2),
     target2: +candidate.target2.toFixed(2),
+    initialQuantity: quantity,
     quantity,
+    partialProfitTaken: false,
     breakevenActivated: false,
     trailingPct: isFO ? 0.05 : (candidate.horizon === 'INTRADAY' ? 0.008 : 0.015),
     unrealizedPL: 0.0,
@@ -463,26 +549,27 @@ async function executeAutonomousTrade(candidate) {
     featuresAtEntry: candidate.featuresAtEntry
   };
 
-  // Update Anti-Overtrading state
   state.activePositions.unshift(newPosition);
   state.dailyTradesCount += 1;
   state.lastTradeTimestamp = Date.now();
   await persistState();
 
-  addDecisionLog('EXECUTE', 
-    `Autonomous Order Placed (${state.dailyTradesCount}/${state.dailyTradeLimit} today): ${candidate.action} ${tradeSymbol} (${quantity} Qty @ ₹${newPosition.entryPrice}). Score: ${candidate.score}/100, R:R 1:${candidate.rrRatio}. Zero-Loss Breakeven active.`,
-    { positionId: newPosition.id, symbol: newPosition.symbol, price: newPosition.entryPrice }
-  );
+  const msg = `Autonomous Order Placed (${state.dailyTradesCount}/${state.dailyTradeLimit} today): ${candidate.action} ${tradeSymbol} (${quantity} Qty @ ₹${newPosition.entryPrice}). Score: ${candidate.score}/100, R:R 1:${candidate.rrRatio}. Two-Stage Profit Booking Active.`;
+  addDecisionLog('EXECUTE', msg, { positionId: newPosition.id, symbol: newPosition.symbol, price: newPosition.entryPrice });
+
+  // Dispatch alert to Telegram and in-app feed
+  dispatchAlert('EXECUTE', `Order Placed: ${candidate.action} ${tradeSymbol}`, 
+    `Executed ${quantity} Qty @ ₹${newPosition.entryPrice}. Stop Loss: ₹${newPosition.stopLoss} | Target 1: ₹${newPosition.target1} | Target 2: ₹${newPosition.target2}. Score: ${candidate.score}/100.`);
 
   return newPosition;
 }
 
 /**
  * Autonomous Position Sentinel & Exit Manager
- * - Trailing stop loss
- * - Zero-loss breakeven lock
- * - Target 1/2 profit lock
- * - Market Close Auto-Square-off at 15:15 IST (24/7 background operation)
+ * - Two-Stage Profit Booking: At Target 1, scale-out 50% & lock SL to Breakeven
+ * - Trailing Stop Loss on runners
+ * - Target 2 full achievement
+ * - 15:15 IST Market Close Auto-Squareoff
  */
 async function monitorAndManagePositions(realQuotes) {
   if (!state.activePositions || state.activePositions.length === 0) return;
@@ -495,20 +582,17 @@ async function monitorAndManagePositions(realQuotes) {
     });
   }
 
-  // Check IST Market Close Window (15:15 - 15:30 IST)
   const ist = getISTDateTime();
   const hours = ist.getHours();
   const minutes = ist.getMinutes();
   const dayOfWeek = ist.getDay();
   const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
-  // Automatically exit intraday positions if 15:15 IST or later
   const isMarketCloseSquareoffTime = isWeekday && ((hours === 15 && minutes >= 15) || hours > 15);
 
   for (let i = state.activePositions.length - 1; i >= 0; i--) {
     const pos = state.activePositions[i];
     pos.ticksObserved = (pos.ticksObserved || 0) + 1;
 
-    // Get live quote
     const cleanSym = (pos.baseSymbol || pos.symbol).replace('.NS', '').split(' ')[0].toUpperCase();
     const quote = stockMap[cleanSym];
     
@@ -531,7 +615,29 @@ async function monitorAndManagePositions(realQuotes) {
       pos.unrealizedPL = +(priceDiff * pos.quantity).toFixed(2);
       pos.unrealizedPLPct = +((priceDiff / pos.entryPrice) * 100).toFixed(2);
 
-      // 1. Zero-Loss Breakeven Lock: Snap Stop-Loss once gain >= +1.0%
+      // 1. Two-Stage Profit Booking: Scale out 50% at Target 1 and snap SL to Breakeven
+      const isTarget1Hit = isUpwardTrade ? pos.currentPrice >= pos.target1 : pos.currentPrice <= pos.target1;
+      if (isTarget1Hit && !pos.partialProfitTaken && pos.quantity >= 2) {
+        pos.partialProfitTaken = true;
+        const bookedQty = Math.floor(pos.quantity / 2);
+        const remainingQty = pos.quantity - bookedQty;
+        const grossBookedPL = +(priceDiff * bookedQty).toFixed(2);
+        const partialBrokerage = 22.50; // Half round-trip brokerage
+        const netBookedPL = +(grossBookedPL - partialBrokerage).toFixed(2);
+
+        // Credit booked profit into virtual capital immediately!
+        state.virtualCapital = +(state.virtualCapital + netBookedPL).toFixed(2);
+        pos.quantity = remainingQty;
+        pos.breakevenActivated = true;
+        pos.stopLoss = isUpwardTrade ? +(pos.entryPrice * 1.002).toFixed(2) : +(pos.entryPrice * 0.998).toFixed(2);
+        pos.status = 'TARGET_1_PARTIAL_PROFIT';
+
+        const scaleOutMsg = `🎯 Target 1 Scaled Out: Banked 50% profit on ${pos.symbol} (+₹${netBookedPL} net). Remaining ${remainingQty} Qty running to Target 2 with Stop-Loss locked at Cost (₹${pos.stopLoss}).`;
+        addDecisionLog('PROFIT_LOCK', scaleOutMsg, { positionId: pos.id, bookedPL: netBookedPL, remainingQty });
+        dispatchAlert('TARGET_1', `Target 1 Scaled Out: ${pos.symbol}`, `Banked 50% profit (+₹${netBookedPL} net). Remaining ${remainingQty} Qty free-riding to Target 2.`);
+      }
+
+      // 2. Zero-Loss Breakeven Lock for non-scaled trades once gain >= +1.0%
       if (!pos.breakevenActivated && pos.unrealizedPLPct >= 1.0) {
         pos.breakevenActivated = true;
         pos.stopLoss = isUpwardTrade ? +(pos.entryPrice * 1.002).toFixed(2) : +(pos.entryPrice * 0.998).toFixed(2);
@@ -541,9 +647,10 @@ async function monitorAndManagePositions(realQuotes) {
           `Zero-Loss Breakeven Guard Activated for ${pos.symbol}! Gain reached +${pos.unrealizedPLPct}%. Stop-loss locked at entry (₹${pos.stopLoss}).`,
           { positionId: pos.id, stopLoss: pos.stopLoss }
         );
+        dispatchAlert('PROFIT_LOCK', `Zero-Loss Breakeven: ${pos.symbol}`, `Position reached +${pos.unrealizedPLPct}%. Stop-loss locked at entry (₹${pos.stopLoss}) to eliminate downside risk.`);
       }
 
-      // 2. Trailing Stop Loss: Lock additional gains once in strong profit (>= +2.0%)
+      // 3. Trailing Stop Loss on runners (>= +2.0%)
       if (pos.unrealizedPLPct >= 2.0) {
         if (isUpwardTrade) {
           const trailedSL = +(pos.currentPrice * (1 - pos.trailingPct)).toFixed(2);
@@ -558,12 +665,9 @@ async function monitorAndManagePositions(realQuotes) {
         }
       }
 
-      // 3. Check Exit Triggers: Market Close (15:15 IST), Target 2, Trailed Stop, Stop-Loss
+      // 4. Check Exit Triggers: Market Close (15:15 IST), Target 2, Trailed Stop, Stop-Loss
       const isStoppedOut = isUpwardTrade ? pos.currentPrice <= pos.stopLoss : pos.currentPrice >= pos.stopLoss;
       const isTarget2Hit = isUpwardTrade ? pos.currentPrice >= pos.target2 : pos.currentPrice <= pos.target2;
-      const isTarget1Hit = isUpwardTrade ? pos.currentPrice >= pos.target1 : pos.currentPrice <= pos.target1;
-      
-      // Auto-square off intraday trades at 15:15 IST without needing app open
       const isIntradayMarketClose = pos.horizon === 'INTRADAY' && isMarketCloseSquareoffTime;
       const openDurationSec = (Date.now() - new Date(pos.openedAt).getTime()) / 1000;
       const isIntradayHoldingExpired = pos.horizon === 'INTRADAY' && (openDurationSec > 7200 || pos.ticksObserved > 120);
@@ -573,8 +677,6 @@ async function monitorAndManagePositions(realQuotes) {
         closeReason = 'MARKET_CLOSE_SQUAREOFF';
       } else if (isTarget2Hit) {
         closeReason = 'TARGET_2_ACHIEVED';
-      } else if (isTarget1Hit && pos.breakevenActivated && pos.unrealizedPLPct >= 2.5) {
-        closeReason = 'TARGET_1_PROFIT_TAKEN';
       } else if (isStoppedOut) {
         closeReason = pos.breakevenActivated ? 'CLOSED_WITH_LOCKED_PROFIT' : 'STOP_LOSS_EXIT';
       } else if (isIntradayHoldingExpired && pos.unrealizedPL >= 0) {
@@ -584,7 +686,7 @@ async function monitorAndManagePositions(realQuotes) {
       if (closeReason) {
         pos.status = closeReason;
         const grossPL = pos.unrealizedPL;
-        const brokerage = ROUND_TRIP_BROKERAGE_TAXES;
+        const brokerage = pos.partialProfitTaken ? 22.50 : ROUND_TRIP_BROKERAGE_TAXES;
         const netRealizedPL = +(grossPL - brokerage).toFixed(2);
         const realizedPLPct = +((netRealizedPL / (pos.entryPrice * pos.quantity)) * 100).toFixed(2);
         
@@ -596,20 +698,16 @@ async function monitorAndManagePositions(realQuotes) {
           grossPL,
           brokerageCharges: brokerage,
           netRealizedPL,
-          realizedPL: netRealizedPL, // Backward compatible
+          realizedPL: netRealizedPL,
           realizedPLPct,
           outcome,
           closedAt: new Date().toISOString()
         };
 
-        // Update capital balance with net P&L
         state.virtualCapital = +(state.virtualCapital + netRealizedPL).toFixed(2);
-        
-        // Remove from active positions and save to history
         state.activePositions.splice(i, 1);
         state.tradeHistory.unshift(closedTrade);
 
-        // Update in MongoDB if connected
         if (isMongoConnected()) {
           try {
             const Trade = require('../models/Trade');
@@ -620,8 +718,6 @@ async function monitorAndManagePositions(realQuotes) {
         }
 
         await persistState();
-
-        // Feed outcome into AI Self-Learning Engine for adaptive calibration!
         await recordTradeOutcome(closedTrade);
 
         const outcomeBadge = outcome === 'WIN' ? 'WIN 🎯' : (outcome === 'BREAKEVEN' ? 'BREAKEVEN 🛡️' : 'LOSS ⚠️');
@@ -634,11 +730,106 @@ async function monitorAndManagePositions(realQuotes) {
           `Autonomous Position Closed [${outcomeBadge}]: ${closedTrade.symbol} exited at ₹${closedTrade.exitPrice} via ${reasonDesc}. Gross: ₹${grossPL >= 0 ? '+' : ''}${grossPL}, Brokerage/Tax: -₹${brokerage}, Net: ₹${netRealizedPL >= 0 ? '+' : ''}${netRealizedPL} (${realizedPLPct}%).`,
           { positionId: closedTrade.id, netPL: netRealizedPL, grossPL, brokerage }
         );
+
+        dispatchAlert(
+          closeReason === 'MARKET_CLOSE_SQUAREOFF' ? 'SQUARE_OFF' : (outcome === 'WIN' ? 'TARGET_2' : 'STOP_LOSS'),
+          `Position Closed [${outcome}]: ${closedTrade.symbol}`,
+          `Exited @ ₹${closedTrade.exitPrice} via ${reasonDesc}. Net P&L: ₹${netRealizedPL >= 0 ? '+' : ''}${netRealizedPL} (${realizedPLPct}%).`
+        );
       }
     }
   }
 
   await persistState();
+}
+
+/**
+ * 1-Click Emergency Panic Square-off
+ * Liquidates ALL active positions at live market spot price immediately.
+ */
+async function panicSquareOffAll() {
+  if (!state.activePositions || state.activePositions.length === 0) {
+    return { success: true, count: 0, message: 'No active positions to square off.' };
+  }
+
+  let totalLiquidated = 0;
+  let totalNetPL = 0;
+  let quotes = null;
+  try {
+    quotes = await getRealQuotes();
+  } catch (e) {}
+
+  const stockMap = {};
+  (quotes?.stocks || []).forEach(s => {
+    stockMap[s.symbol.toUpperCase()] = s;
+    stockMap[s.symbol.replace('.NS', '').toUpperCase()] = s;
+  });
+
+  for (let i = state.activePositions.length - 1; i >= 0; i--) {
+    const pos = state.activePositions[i];
+    const cleanSym = (pos.baseSymbol || pos.symbol).replace('.NS', '').split(' ')[0].toUpperCase();
+    const quote = stockMap[cleanSym];
+    const currentPrice = quote?.price || pos.currentPrice;
+
+    const isOptionBuyer = pos.direction === 'BUY_CALL' || pos.direction === 'BUY_PUT';
+    const isUpwardTrade = isOptionBuyer || pos.direction === 'BUY';
+    const priceDiff = isUpwardTrade ? (currentPrice - pos.entryPrice) : (pos.entryPrice - currentPrice);
+    const grossPL = +(priceDiff * pos.quantity).toFixed(2);
+    const brokerage = ROUND_TRIP_BROKERAGE_TAXES;
+    const netPL = +(grossPL - brokerage).toFixed(2);
+    const realizedPLPct = +((netPL / (pos.entryPrice * pos.quantity)) * 100).toFixed(2);
+
+    const closedTrade = {
+      ...pos,
+      exitPrice: currentPrice,
+      grossPL,
+      brokerageCharges: brokerage,
+      netRealizedPL: netPL,
+      realizedPL: netPL,
+      realizedPLPct,
+      status: 'PANIC_EMERGENCY_EXIT',
+      outcome: netPL > 0 ? 'WIN' : (netPL === 0 ? 'BREAKEVEN' : 'LOSS'),
+      closedAt: new Date().toISOString()
+    };
+
+    state.virtualCapital = +(state.virtualCapital + netPL).toFixed(2);
+    state.activePositions.splice(i, 1);
+    state.tradeHistory.unshift(closedTrade);
+    totalLiquidated += 1;
+    totalNetPL += netPL;
+
+    if (isMongoConnected()) {
+      try {
+        const Trade = require('../models/Trade');
+        await Trade.findOneAndUpdate({ id: closedTrade.id }, closedTrade, { upsert: true });
+      } catch (e) {}
+    }
+  }
+
+  await persistState();
+
+  addDecisionLog('PANIC_EXIT', `🚨 Emergency Panic Square-off Executed! Liquidated ${totalLiquidated} positions immediately. Net P&L: ₹${totalNetPL.toFixed(2)}.`);
+  dispatchAlert('PANIC_EXIT', 'Emergency Panic Square-off Executed', `Liquidated ${totalLiquidated} open positions immediately. Total Net P&L: ₹${totalNetPL >= 0 ? '+' : ''}${totalNetPL.toFixed(2)}.`);
+
+  return { success: true, count: totalLiquidated, totalNetPL, message: `Successfully emergency squared off ${totalLiquidated} positions.` };
+}
+
+/**
+ * Switch Risk Profile Mode (Conservative, Balanced, Aggressive)
+ */
+function setRiskProfile(profileName) {
+  const profileKey = (profileName || 'BALANCED').toUpperCase();
+  const profile = RISK_PROFILES[profileKey] || RISK_PROFILES.BALANCED;
+
+  state.riskProfile = profile.name;
+  state.maxConcurrentPositions = profile.maxConcurrentPositions;
+  state.dailyTradeLimit = profile.dailyTradeLimit;
+  state.minCashReserveRatio = profile.minCashReserveRatio;
+
+  persistState();
+
+  addDecisionLog('SYSTEM', `Risk Profile switched to: ${profile.name} (${profile.description})`);
+  return { success: true, profile: profile.name, details: profile };
 }
 
 /**
@@ -663,7 +854,6 @@ function getAccuracyMetrics() {
   const pureWinRatePct = totalTrades > 0 ? +((winningTrades / totalTrades) * 100).toFixed(1) : 100.0;
   const profitFactor = grossLoss > 0 ? +(grossProfit / grossLoss).toFixed(2) : (grossProfit > 0 ? 99.0 : 1.0);
 
-  // Segment Breakdown Analysis
   const getSegmentStats = (predicate) => {
     const subset = history.filter(predicate);
     const subTotal = subset.length;
@@ -722,6 +912,7 @@ function getRiskGuardStatus() {
   const isMarketOpenNow = (day >= 1 && day <= 5) && ((hours === 9 && minutes >= 15) || (hours > 9 && hours < 15) || (hours === 15 && minutes < 30));
 
   return {
+    riskProfile: state.riskProfile,
     maxConcurrentPositions: state.maxConcurrentPositions,
     activePositionsCount: state.activePositions.length,
     slotsAvailable: Math.max(0, state.maxConcurrentPositions - state.activePositions.length),
@@ -750,11 +941,12 @@ async function runAutonomousCycle() {
 
   try {
     const quotes = await getRealQuotes();
+    detectMarketRegime(quotes);
     
-    // Step 1: Manage active positions (Trailing stop, breakeven lock, target exits, 15:15 IST auto-squareoff)
+    // Step 1: Manage active positions (Target 1 50% scale-out, trailing stop, breakeven lock, 15:15 IST auto-squareoff)
     await monitorAndManagePositions(quotes);
 
-    // Step 2: If we have position capacity and pass Anti-Overtrading Guard, scan and execute
+    // Step 2: If we have capacity and pass guards, scan and execute
     checkDailyReset();
     const canTrade = state.isAutoPilotActive && 
       state.activePositions.length < state.maxConcurrentPositions && 
@@ -763,14 +955,13 @@ async function runAutonomousCycle() {
 
     if (canTrade) {
       const now = Date.now();
-      // Scan every 6 seconds to avoid hammering
       if (now - state.lastScanTimestamp > 6000) {
         state.lastScanTimestamp = now;
-        const candidates = await scanMarketOpportunities();
+        const candidates = await scanMarketOpportunities(quotes);
 
         if (candidates && candidates.length > 0) {
           const bestCandidate = candidates[0];
-          const threshold = getBaseScoreThreshold();
+          const threshold = RISK_PROFILES[state.riskProfile]?.baseScoreThreshold || getBaseScoreThreshold();
           if (bestCandidate && bestCandidate.score >= threshold) {
             await executeAutonomousTrade(bestCandidate);
           }
@@ -792,7 +983,8 @@ async function startAutonomousAgent() {
   if (agentInterval) clearInterval(agentInterval);
 
   console.log('🤖 [AI Agent] Autonomous Trading Sentinel booted. Auto-Pilot:', state.isAutoPilotActive ? 'ENABLED' : 'PAUSED');
-  console.log(`🛡️ [AI Agent] Anti-Overtrading Guard: Max ${state.maxConcurrentPositions} concurrent positions, ${state.dailyTradeLimit} daily limit, 10m cooldown.`);
+  console.log(`🛡️ [AI Agent] Anti-Overtrading Guard: Max ${state.maxConcurrentPositions} positions, ${state.dailyTradeLimit} daily limit, Mode: ${state.riskProfile}`);
+  console.log(`🎯 [AI Agent] Two-Stage Profit Booking: Active (50% scale-out @ T1 + Free-ride T2).`);
   console.log(`⏰ [AI Agent] Market Close Auto-Squareoff: 15:15 IST enabled.`);
   
   addDecisionLog('SYSTEM', `Autonomous AI Trading Sentinel engine booted. MongoDB: ${isMongoConnected() ? 'CONNECTED' : 'LOCAL_STORAGE_MODE'}.`);
@@ -842,8 +1034,12 @@ module.exports = {
   runAutonomousCycle,
   toggleAutoPilot,
   resetAgentSandbox,
+  panicSquareOffAll,
+  setRiskProfile,
   getAgentStatus: () => ({
     isAutoPilotActive: state.isAutoPilotActive,
+    riskProfile: state.riskProfile,
+    marketRegime: state.marketRegime,
     maxConcurrentPositions: state.maxConcurrentPositions,
     virtualCapital: state.virtualCapital,
     activePositions: state.activePositions,

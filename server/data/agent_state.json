@@ -1,149 +1,39 @@
 {
   "isAutoPilotActive": true,
-  "maxConcurrentPositions": 4,
-  "virtualCapital": 100024.5,
+  "riskProfile": "BALANCED",
+  "maxConcurrentPositions": 2,
+  "dailyTradeLimit": 5,
+  "dailyTradesCount": 0,
+  "lastTradeDate": "2026-09-30",
+  "lastTradeTimestamp": 0,
+  "tradeCooldownMs": 600000,
+  "minCashReserveRatio": 0.7,
+  "virtualCapital": 100000,
   "allocatedCapital": 0,
-  "lastScanTimestamp": 1790761203996,
-  "activePositions": [
-    {
-      "id": "auto_1790761148974_49mxww",
-      "symbol": "M&M 2950 PE",
-      "baseSymbol": "M&M.NS",
-      "horizon": "F_AND_O",
-      "direction": "BUY_PUT",
-      "entryPrice": 73.48,
-      "currentPrice": 73.44,
-      "stopLoss": 55.11,
-      "target1": 106.55,
-      "target2": 146.96,
-      "quantity": 350,
-      "breakevenActivated": false,
-      "trailingPct": 0.05,
-      "unrealizedPL": -14,
-      "unrealizedPLPct": -0.05,
-      "status": "ACTIVE_RUNNING",
-      "openedAt": "2026-09-30T09:39:08.974Z",
-      "isAutonomous": true,
-      "score": 97,
-      "confidence": 91,
-      "rrRatio": 0.98,
-      "rationale": "High-conviction Bearish Plunge: Buying 2950 PE to exploit heavy breakdown.",
-      "ticksObserved": 23,
-      "underlyingSpotAtEntry": 2939.99
-    },
-    {
-      "id": "auto_1790759222071_nl9p8i",
-      "symbol": "MARUTI 11900 PE",
-      "baseSymbol": "MARUTI.NS",
-      "horizon": "F_AND_O",
-      "direction": "BUY_PUT",
-      "entryPrice": 297.43,
-      "currentPrice": 297.27,
-      "stopLoss": 223.07,
-      "target1": 431.27,
-      "target2": 594.86,
-      "quantity": 50,
-      "breakevenActivated": false,
-      "trailingPct": 0.05,
-      "unrealizedPL": -8,
-      "unrealizedPLPct": -0.05,
-      "status": "ACTIVE_RUNNING",
-      "openedAt": "2026-09-30T09:07:02.071Z",
-      "isAutonomous": true,
-      "score": 97,
-      "confidence": 91,
-      "rrRatio": 0.98,
-      "rationale": "High-conviction Bearish Plunge: Buying 11900 PE to exploit heavy breakdown.",
-      "ticksObserved": 734,
-      "underlyingSpotAtEntry": 11897
-    }
-  ],
-  "tradeHistory": [
-    {
-      "id": "auto_1790759372511_jpezqa",
-      "symbol": "M&M 2950 PE",
-      "baseSymbol": "M&M.NS",
-      "horizon": "F_AND_O",
-      "direction": "BUY_PUT",
-      "entryPrice": 73.59,
-      "currentPrice": 73.66,
-      "stopLoss": 73.74,
-      "target1": 106.71,
-      "target2": 147.18,
-      "quantity": 350,
-      "breakevenActivated": true,
-      "trailingPct": 0.05,
-      "unrealizedPL": 24.5,
-      "unrealizedPLPct": 0.1,
-      "status": "CLOSED_WITH_LOCKED_PROFIT",
-      "openedAt": "2026-09-30T09:09:32.511Z",
-      "isAutonomous": true,
-      "score": 97,
-      "confidence": 91,
-      "rrRatio": 0.98,
-      "rationale": "High-conviction Bearish Plunge: Buying 2950 PE to exploit heavy breakdown.",
-      "ticksObserved": 708,
-      "underlyingSpotAtEntry": 2943.5,
-      "exitPrice": 73.66,
-      "realizedPL": 24.5,
-      "realizedPLPct": 0.1,
-      "outcome": "WIN",
-      "closedAt": "2026-09-30T09:39:03.972Z"
-    }
-  ],
+  "lastScanTimestamp": 0,
+  "marketRegime": {
+    "index": "NIFTY 50",
+    "regime": "NEUTRAL",
+    "changePct": "0.00%",
+    "confluenceNote": "Evaluating market breadth"
+  },
+  "activePositions": [],
+  "tradeHistory": [],
   "decisionLogs": [
     {
-      "id": "log_1790761148975_qkim",
-      "timestamp": "2026-09-30T09:39:08.975Z",
-      "displayTime": "03:09:08 pm",
-      "type": "EXECUTE",
-      "message": "Autonomous Order Placed: BUY_PUT M&M 2950 PE (350 Qty @ ₹73.48). Score: 97/100, R:R: 1:0.98. High-conviction Bearish Plunge: Buying 2950 PE to exploit heavy breakdown.",
-      "metadata": {
-        "positionId": "auto_1790761148974_49mxww",
-        "symbol": "M&M 2950 PE",
-        "price": 73.48
-      }
-    },
-    {
-      "id": "log_1790761143973_1azs",
-      "timestamp": "2026-09-30T09:39:03.973Z",
-      "displayTime": "03:09:03 pm",
-      "type": "TARGET_HIT",
-      "message": "Autonomous Position Closed [WIN 🎯]: M&M 2950 PE exited at ₹73.66 via CLOSED_WITH_LOCKED_PROFIT. P&L: ₹+24.5 (0.1%).",
-      "metadata": {
-        "positionId": "auto_1790759372511_jpezqa",
-        "pnl": 24.5
-      }
-    },
-    {
-      "id": "log_1790761128967_iw1f",
-      "timestamp": "2026-09-30T09:38:48.967Z",
-      "displayTime": "03:08:48 pm",
-      "type": "PROFIT_LOCK",
-      "message": "Zero-Loss Breakeven Guard Activated for M&M 2950 PE! Position reached +1.14%. Stop-loss locked at entry (₹73.74).",
-      "metadata": {
-        "positionId": "auto_1790759372511_jpezqa",
-        "stopLoss": 73.74
-      }
-    },
-    {
-      "id": "log_1790759372511_xogu",
-      "timestamp": "2026-09-30T09:09:32.511Z",
-      "displayTime": "02:39:32 pm",
-      "type": "EXECUTE",
-      "message": "Autonomous Order Placed: BUY_PUT M&M 2950 PE (350 Qty @ ₹73.59). Score: 97/100, R:R: 1:0.98. High-conviction Bearish Plunge: Buying 2950 PE to exploit heavy breakdown.",
-      "metadata": {
-        "positionId": "auto_1790759372511_jpezqa",
-        "symbol": "M&M 2950 PE",
-        "price": 73.59
-      }
-    },
-    {
-      "id": "log_1790759368243_dea7",
-      "timestamp": "2026-09-30T09:09:28.243Z",
-      "displayTime": "02:39:28 pm",
+      "id": "log_1790764499077_9o0r",
+      "timestamp": "2026-09-30T10:34:59.077Z",
+      "displayTime": "04:04:59 pm",
       "type": "SYSTEM",
-      "message": "Autonomous AI Trading Agent engine booted in background mode.",
+      "message": "Risk Profile switched to: AGGRESSIVE (Maximum frequency: max 3 positions, Score ≥ 76, 60% cash floor.)",
+      "metadata": null
+    },
+    {
+      "id": "log_1790764499076_o5sg",
+      "timestamp": "2026-09-30T10:34:59.076Z",
+      "displayTime": "04:04:59 pm",
+      "type": "SYSTEM",
+      "message": "Risk Profile switched to: CONSERVATIVE (High selectivity: max 1 position, strict Score ≥ 84, 80% cash floor.)",
       "metadata": null
     }
   ]
