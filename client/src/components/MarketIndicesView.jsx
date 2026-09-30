@@ -165,8 +165,8 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
   ];
 
   // Fetch real market detection from API
-  const fetchMarketDetection = async () => {
-    setIsLoading(true);
+  const fetchMarketDetection = async (showLoading = false) => {
+    if (showLoading) setIsLoading(true);
     try {
       const res = await fetch('/api/market/real-detection');
       const text = await res.text();
@@ -188,14 +188,16 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
             pcr: 0.95,
             rsi: idx.rsi || 30.0,
             status: idx.rsi < 35 ? 'OVERSOLD' : (idx.rsi > 65 ? 'OVERBOUGHT' : 'NEUTRAL'),
-            description: `Live exchange feed for ${idx.name} with authentic 14-period RSI at ${idx.rsi || 30.0}.`
+            description: `Live exchange feed for ${idx.name} with authentic 14-period RSI at ${idx.rsi || 30.0}.`,
+            tickDirection: idx.tickDirection || 'SAME'
           })));
         }
 
         if (data.stocks && data.stocks.length > 0) {
           setStocksUniverse(data.stocks.map(s => ({
             ...s,
-            isUp: !String(s.changePct).startsWith('-')
+            isUp: !String(s.changePct).startsWith('-'),
+            tickDirection: s.tickDirection || 'SAME'
           })));
         }
 
@@ -208,7 +210,7 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
     } catch (err) {
       console.warn('Failed to load market detection:', err);
     } finally {
-      setIsLoading(false);
+      if (showLoading) setIsLoading(false);
     }
   };
 
@@ -222,7 +224,7 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
       const data = text ? JSON.parse(text) : null;
       if (data && data.success) {
         setSyncNotice(`Synced live exchange data for ${data.stocksCount} NSE equities & indices!`);
-        await fetchMarketDetection();
+        await fetchMarketDetection(false);
       } else {
         setSyncNotice('Sync completed.');
       }
@@ -235,8 +237,8 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
   };
 
   useEffect(() => {
-    fetchMarketDetection();
-    const interval = setInterval(fetchMarketDetection, 30000); // 30s auto-refresh
+    fetchMarketDetection(true);
+    const interval = setInterval(() => fetchMarketDetection(false), 1500); // 1.5s live streaming ticker
     return () => clearInterval(interval);
   }, []);
 
@@ -396,7 +398,8 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
                     fontSize: '1.65rem',
                     fontWeight: 800,
                     fontFamily: 'var(--font-mono)',
-                    color: '#fff'
+                    color: idx.tickDirection === 'UP' ? 'var(--accent-emerald)' : (idx.tickDirection === 'DOWN' ? '#f87171' : '#fff'),
+                    transition: 'color 0.25s ease'
                   }}>
                     ₹{Number(idx.value || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
@@ -407,10 +410,18 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
                     color: idx.isUp ? 'var(--accent-emerald)' : 'var(--danger)',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '2px'
+                    gap: '4px'
                   }}>
                     {idx.isUp ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
                     {idx.change > 0 ? `+${idx.change}` : idx.change} ({idx.pct})
+                    <span style={{
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      backgroundColor: idx.tickDirection === 'UP' ? 'var(--accent-emerald)' : (idx.tickDirection === 'DOWN' ? '#ef4444' : 'rgba(255,255,255,0.2)'),
+                      display: 'inline-block',
+                      animation: idx.tickDirection !== 'SAME' ? 'pulse 1s infinite' : 'none'
+                    }} />
                   </span>
                 </div>
 
@@ -537,8 +548,25 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
                       <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>{stock.name} • {stock.sector}</div>
                     </td>
 
-                    <td style={{ padding: '12px 14px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#fff' }}>
-                      ₹{Number(stock.price || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    <td style={{ padding: '12px 14px', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{
+                          color: stock.tickDirection === 'UP' ? 'var(--accent-emerald)' : (stock.tickDirection === 'DOWN' ? '#f87171' : '#fff'),
+                          transition: 'color 0.25s ease'
+                        }}>
+                          ₹{Number(stock.price || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </span>
+                        {stock.tickDirection && stock.tickDirection !== 'SAME' && (
+                          <span style={{
+                            width: '6px',
+                            height: '6px',
+                            borderRadius: '50%',
+                            backgroundColor: stock.tickDirection === 'UP' ? 'var(--accent-emerald)' : '#ef4444',
+                            animation: 'pulse 1s infinite',
+                            display: 'inline-block'
+                          }} />
+                        )}
+                      </div>
                     </td>
 
                     <td style={{ padding: '12px 14px' }}>

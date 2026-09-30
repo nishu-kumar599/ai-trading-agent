@@ -382,9 +382,9 @@ async function getRealQuotes() {
  * Return detailed real market detection (advances, declines, sectors, stocks)
  */
 async function getRealMarketDetection() {
-  const data = await syncRealMarketData();
-  const indices = data.indices && data.indices.length > 0 ? data.indices : FALLBACK_INDICES;
-  const stocks = data.stocks && data.stocks.length > 0 ? data.stocks : FALLBACK_STOCKS;
+  await syncRealMarketData();
+  const indices = marketCache.indices && marketCache.indices.length > 0 ? marketCache.indices : FALLBACK_INDICES;
+  const stocks = marketCache.stocks && marketCache.stocks.length > 0 ? marketCache.stocks : FALLBACK_STOCKS;
 
   // Compute market breadth
   let advances = 0;
@@ -405,8 +405,9 @@ async function getRealMarketDetection() {
     },
     topGainers: [...stocks].sort((a, b) => parseFloat(b.changePct) - parseFloat(a.changePct)).slice(0, 5),
     topLosers: [...stocks].sort((a, b) => parseFloat(a.changePct) - parseFloat(b.changePct)).slice(0, 5),
-    lastSynced: new Date(data.lastUpdated || Date.now()).toLocaleTimeString('en-IN'),
-    syncStatus: data.syncStatus,
+    lastSynced: new Date().toLocaleTimeString('en-IN'),
+    tickTimestamp: Date.now(),
+    syncStatus: marketCache.syncStatus,
     isRealMarket: true
   };
 }
@@ -415,8 +416,8 @@ async function getRealMarketDetection() {
  * Return stocks formatted for a specific trading horizon with action and quantitative signals
  */
 async function getRealMarketUniverse(horizon = 'INTRADAY') {
-  const data = await syncRealMarketData();
-  const stocks = data.stocks && data.stocks.length > 0 ? data.stocks : FALLBACK_STOCKS;
+  await syncRealMarketData();
+  const stocks = marketCache.stocks && marketCache.stocks.length > 0 ? marketCache.stocks : FALLBACK_STOCKS;
 
   return stocks.map(stock => {
     let action = 'HOLD';
