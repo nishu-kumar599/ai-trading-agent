@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Login } from './components/Login';
 import { Signup } from './components/Signup';
+import { ForgotPassword } from './components/ForgotPassword';
 import { Dashboard } from './components/Dashboard';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { TrendingUp } from 'lucide-react';
 
 function AppContent() {
   const { isAuthenticated, loading } = useAuth();
-  const [authView, setAuthView] = useState('login'); // 'login' | 'signup'
+  const [authView, setAuthView] = useState('login'); // 'login' | 'signup' | 'forgot'
 
   if (loading) {
     return (
@@ -37,10 +38,17 @@ function AppContent() {
 
   return (
     <div className="app-container">
-      {authView === 'login' ? (
-        <Login onSwitchToSignup={() => setAuthView('signup')} />
-      ) : (
+      {authView === 'login' && (
+        <Login 
+          onSwitchToSignup={() => setAuthView('signup')} 
+          onSwitchToForgot={() => setAuthView('forgot')} 
+        />
+      )}
+      {authView === 'signup' && (
         <Signup onSwitchToLogin={() => setAuthView('login')} />
+      )}
+      {authView === 'forgot' && (
+        <ForgotPassword onSwitchToLogin={() => setAuthView('login')} />
       )}
     </div>
   );

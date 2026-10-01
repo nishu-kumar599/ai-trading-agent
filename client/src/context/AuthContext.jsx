@@ -118,6 +118,107 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Forgot password - request reset code
+  const forgotPassword = async (email) => {
+    setAuthError(null);
+    try {
+      const response = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : null;
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || 'Failed to generate reset code.');
+      }
+      return data;
+    } catch (err) {
+      setAuthError(err.message);
+      throw err;
+    }
+  };
+
+  // Reset password with verification code & auto-login
+  const resetPassword = async (email, code, newPassword) => {
+    setAuthError(null);
+    try {
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code, newPassword })
+      });
+
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : null;
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || 'Failed to reset password.');
+      }
+
+      if (data.token) {
+        localStorage.setItem('aitrader_token', data.token);
+        setToken(data.token);
+        setUser(data.user);
+      }
+      return data;
+    } catch (err) {
+      setAuthError(err.message);
+      throw err;
+    }
+  };
+
+  // Change password for logged-in user
+  const changePassword = async (currentPassword, newPassword) => {
+    try {
+      const storedToken = localStorage.getItem('aitrader_token') || token;
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${storedToken}`
+        },
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : null;
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || 'Failed to change password.');
+      }
+      return data;
+    } catch (err) {
+      throw err;
+    }
+  };
+
+  // Update profile details
+  const updateProfile = async ({ name, phone }) => {
+    try {
+      const storedToken = localStorage.getItem('aitrader_token') || token;
+      const response = await fetch('/api/auth/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${storedToken}`
+        },
+        body: JSON.stringify({ name, phone })
+      });
+
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : null;
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || 'Failed to update profile.');
+      }
+      if (data.user) {
+        setUser(data.user);
+      }
+      return data;
+    } catch (err) {
+      throw err;
+    }
+  };
+
   // Logout handler
   const logout = () => {
     localStorage.removeItem('aitrader_token');
@@ -136,6 +237,10 @@ export const AuthProvider = ({ children }) => {
         clearError,
         login,
         register,
+        forgotPassword,
+        resetPassword,
+        changePassword,
+        updateProfile,
         logout,
         isAuthenticated: !!user
       }}

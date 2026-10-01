@@ -23,6 +23,7 @@ export const Sidebar = ({
   activeTab, 
   onSelectTab, 
   onOpenCalculator,
+  onOpenProfile,
   isCollapsed = false,
   onToggleCollapse,
   isMobileOpen = false,
@@ -336,7 +337,22 @@ export const Sidebar = ({
           flexDirection: isCollapsed ? 'column' : 'row',
           gap: isCollapsed ? '8px' : '0'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }} title={user?.email || 'demo@aitrading.com'}>
+          <div 
+            onClick={() => {
+              if (onOpenProfile) onOpenProfile();
+              if (onCloseMobile) onCloseMobile();
+            }}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '10px', 
+              cursor: 'pointer',
+              padding: '4px 6px',
+              borderRadius: '8px',
+              transition: 'background 0.2s ease'
+            }} 
+            title="Click to view Account Profile & Security Settings"
+          >
             <div className="user-avatar" style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#051610' }}>
               {getInitials(user?.name)}
             </div>

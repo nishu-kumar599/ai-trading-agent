@@ -14,7 +14,7 @@ import {
   Sparkles
 } from 'lucide-react';
 
-export const Login = ({ onSwitchToSignup }) => {
+export const Login = ({ onSwitchToSignup, onSwitchToForgot }) => {
   const { login, authError, clearError } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,13 +22,11 @@ export const Login = ({ onSwitchToSignup }) => {
   const [rememberMe, setRememberMe] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [localError, setLocalError] = useState('');
-  const [forgotMsg, setForgotMsg] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     clearError();
     setLocalError('');
-    setForgotMsg('');
 
     if (!email.trim() || !password) {
       setLocalError('Please enter both email and password.');
@@ -49,7 +47,6 @@ export const Login = ({ onSwitchToSignup }) => {
   const handleDemoLogin = async () => {
     clearError();
     setLocalError('');
-    setForgotMsg('');
     setEmail('demo@aitrading.com');
     setPassword('demo1234');
     setIsSubmitting(true);
@@ -61,10 +58,6 @@ export const Login = ({ onSwitchToSignup }) => {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleForgotPassword = () => {
-    setForgotMsg('Password reset instructions have been simulated for ' + (email || 'your email') + '. For demo purposes, you can use demo@aitrading.com / demo1234');
   };
 
   const activeError = localError || authError;
@@ -149,13 +142,6 @@ export const Login = ({ onSwitchToSignup }) => {
             </div>
           )}
 
-          {forgotMsg && (
-            <div className="alert-box alert-success">
-              <Sparkles size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
-              <div>{forgotMsg}</div>
-            </div>
-          )}
-
           <form onSubmit={handleSubmit}>
             <div className="form-group">
               <label className="form-label" htmlFor="email">Work Email</label>
@@ -217,7 +203,10 @@ export const Login = ({ onSwitchToSignup }) => {
               <button
                 type="button"
                 className="link-btn"
-                onClick={handleForgotPassword}
+                onClick={() => {
+                  clearError();
+                  if (onSwitchToForgot) onSwitchToForgot();
+                }}
               >
                 Forgot password?
               </button>

@@ -6,6 +6,11 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   password: { type: String, required: true },
   role: { type: String, default: 'trader' },
+  virtualBalance: { type: Number, default: 100000.00 },
+  resetPasswordToken: { type: String, default: null },
+  resetPasswordExpires: { type: Date, default: null },
+  lastLoginAt: { type: Date, default: Date.now },
+  phone: { type: String, default: '' },
   createdAt: { type: Date, default: Date.now }
 }, {
   timestamps: true

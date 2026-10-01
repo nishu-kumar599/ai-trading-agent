@@ -11,6 +11,7 @@ import { RiskCalculatorModal } from './RiskCalculatorModal';
 import { MarketTickerTape } from './MarketTickerTape';
 import { MarketIndicesView } from './MarketIndicesView';
 import { IPOSection } from './IPOSection';
+import { UserProfileModal } from './UserProfileModal';
 import { ErrorBoundary } from './ErrorBoundary';
 import { 
   TrendingUp, 
@@ -28,7 +29,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   BarChart3,
-  Menu
+  Menu,
+  User
 } from 'lucide-react';
 import { MobileBottomNav } from './MobileBottomNav';
 
@@ -38,6 +40,7 @@ export const Dashboard = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeMainTab, setActiveMainTab] = useState('calendar'); // Open on Calendar / Audit
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
@@ -228,6 +231,7 @@ export const Dashboard = () => {
         activeTab={activeMainTab} 
         onSelectTab={setActiveMainTab} 
         onOpenCalculator={() => setIsCalculatorOpen(true)}
+        onOpenProfile={() => setIsProfileOpen(true)}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
         isMobileOpen={isMobileSidebarOpen}
@@ -331,9 +335,28 @@ export const Dashboard = () => {
                 Live Algorithmic Execution Core
               </span>
             )}
-            <span className="terminal-user-badge" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              Terminal Active • {user?.email || 'demo@aitrading.com'}
-            </span>
+            <button
+              onClick={() => setIsProfileOpen(true)}
+              type="button"
+              className="terminal-user-badge"
+              title="Click to view Account Profile & Security Settings"
+              style={{
+                fontSize: '0.8rem',
+                color: '#e2e8f0',
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid var(--border-subtle)',
+                padding: '4px 10px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <User size={13} color="#10b981" />
+              <span>{user?.name || 'Trader'} • {user?.email || 'demo@aitrading.com'}</span>
+            </button>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -690,6 +713,12 @@ export const Dashboard = () => {
       <RiskCalculatorModal 
         isOpen={isCalculatorOpen} 
         onClose={() => setIsCalculatorOpen(false)} 
+      />
+
+      {/* User Account Profile & Password Changer Modal */}
+      <UserProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
       />
 
       {/* Mobile Bottom Navigation Bar (Visible on < 768px screens) */}
