@@ -622,12 +622,12 @@ export const Dashboard = () => {
             <div className="stat-card">
               <div className="stat-card-title">
                 <span>NSE Nifty & Market Breadth</span>
-                <ShieldCheck size={16} color={niftyChange.startsWith('-') ? 'var(--danger)' : 'var(--accent-emerald)'} />
+                <ShieldCheck size={16} color={String(niftyChange || '').startsWith('-') ? 'var(--danger)' : 'var(--accent-emerald)'} />
               </div>
-              <div className="stat-card-value" style={{ color: niftyChange.startsWith('-') ? '#f87171' : 'var(--accent-emerald)' }}>
+              <div className="stat-card-value" style={{ color: String(niftyChange || '').startsWith('-') ? '#f87171' : 'var(--accent-emerald)' }}>
                 {nifty?.price ? `₹${nifty.price.toLocaleString('en-IN')}` : '₹22,794.00'}
               </div>
-              <div className="stat-card-tag" style={{ color: niftyChange.startsWith('-') ? '#f87171' : 'var(--accent-emerald)' }}>
+              <div className="stat-card-tag" style={{ color: String(niftyChange || '').startsWith('-') ? '#f87171' : 'var(--accent-emerald)' }}>
                 <CheckCircle2 size={14} />
                 {niftyChange} • {advances} Adv / {declines} Dec
               </div>

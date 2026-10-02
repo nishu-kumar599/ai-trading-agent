@@ -6,8 +6,9 @@ yarn-debug.log*
 yarn-error.log*
 
 # Production builds
-dist/
-client/dist/
+/dist/
+!client/dist/
+!client/dist/**
 build/
 
 # Environment and secrets

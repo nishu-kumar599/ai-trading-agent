@@ -8,15 +8,15 @@ export const CandlestickModal = ({ stock, onClose }) => {
 
   const symbol = stock.symbol || 'STOCK';
   const name = stock.name || symbol;
-  const price = stock.currentPrice || stock.price || 1000;
-  const entryPrice = stock.entryPrice || price;
-  const stopLoss = stock.stopLoss || +(price * 0.992).toFixed(2);
-  const target1 = stock.target1 || +(price * 1.015).toFixed(2);
-  const target2 = stock.target2 || +(price * 1.030).toFixed(2);
-  const vwap = stock.vwap || +(price * 0.998).toFixed(2);
-  const ema9 = stock.ema9 || +(price * 1.002).toFixed(2);
-  const ema21 = stock.ema21 || +(price * 0.996).toFixed(2);
-  const rsi = stock.rsi || 58.4;
+  const price = parseFloat(stock.currentPrice || stock.price) || 1000;
+  const entryPrice = parseFloat(stock.entryPrice) || price;
+  const stopLoss = parseFloat(stock.stopLoss) || +(price * 0.992).toFixed(2);
+  const target1 = parseFloat(stock.target1) || +(price * 1.015).toFixed(2);
+  const target2 = parseFloat(stock.target2) || +(price * 1.030).toFixed(2);
+  const vwap = parseFloat(stock.vwap) || +(price * 0.998).toFixed(2);
+  const ema9 = parseFloat(stock.ema9) || +(price * 1.002).toFixed(2);
+  const ema21 = parseFloat(stock.ema21) || +(price * 0.996).toFixed(2);
+  const rsi = parseFloat(stock.rsi) || 58.4;
   const direction = stock.direction || (stock.intradaySignal || 'BUY');
 
   // Generate realistic synthetic OHLC candles around the stock's actual price
@@ -53,7 +53,7 @@ export const CandlestickModal = ({ stock, onClose }) => {
   }
 
   // Calculate chart bounds
-  const allValues = [
+  const rawValues = [
     ...candles.map(c => c.high),
     ...candles.map(c => c.low),
     target1,
@@ -61,8 +61,9 @@ export const CandlestickModal = ({ stock, onClose }) => {
     stopLoss,
     entryPrice
   ];
-  const minVal = Math.min(...allValues) * 0.997;
-  const maxVal = Math.max(...allValues) * 1.003;
+  const allValues = rawValues.filter(v => typeof v === 'number' && !isNaN(v) && isFinite(v));
+  const minVal = (allValues.length > 0 ? Math.min(...allValues) : price * 0.95) * 0.997;
+  const maxVal = (allValues.length > 0 ? Math.max(...allValues) : price * 1.05) * 1.003;
   const valRange = maxVal - minVal || 1;
 
   const chartHeight = 320;

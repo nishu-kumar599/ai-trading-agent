@@ -62,6 +62,23 @@ export class ErrorBoundary extends React.Component {
             <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', maxWidth: '540px', margin: '0 auto', lineHeight: '1.5' }}>
               This section encountered an unexpected render issue while fetching live market feeds. Your active trades, capital, and risk guards remain 100% safe and unaffected.
             </p>
+            {this.state.error && (
+              <div style={{
+                marginTop: '10px',
+                padding: '6px 12px',
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                borderRadius: '8px',
+                fontFamily: 'monospace',
+                fontSize: '0.74rem',
+                color: '#f87171',
+                maxWidth: '520px',
+                margin: '10px auto 0 auto',
+                wordBreak: 'break-word'
+              }}>
+                {this.state.error.message || String(this.state.error)}
+              </div>
+            )}
           </div>
 
           <div style={{

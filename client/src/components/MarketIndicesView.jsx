@@ -251,8 +251,9 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
     if (activeCategory === 'ALL') return true;
     if (activeCategory === 'BUY') return stock.intradaySignal === 'BUY' || stock.foAction === 'BUY_CALL';
     if (activeCategory === 'SELL') return stock.intradaySignal === 'SELL' || stock.foAction === 'BUY_PUT';
-    if (activeCategory === 'TECH') return stock.sector.toLowerCase().includes('information') || stock.sector.toLowerCase().includes('it');
-    if (activeCategory === 'BANK') return stock.sector.toLowerCase().includes('banking') || stock.sector.toLowerCase().includes('financial');
+    const sector = (stock.sector || '').toLowerCase();
+    if (activeCategory === 'TECH') return sector.includes('information') || sector.includes('it');
+    if (activeCategory === 'BANK') return sector.includes('banking') || sector.includes('financial');
     return true;
   });
 
