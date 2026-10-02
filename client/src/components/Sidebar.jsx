@@ -18,6 +18,7 @@ import {
   X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useMarket } from '../context/MarketContext';
 
 export const Sidebar = ({ 
   activeTab, 
@@ -30,6 +31,7 @@ export const Sidebar = ({
   onCloseMobile
 }) => {
   const { user, logout } = useAuth();
+  const { marketRegion, setMarketRegion, toggleMarket, currency } = useMarket();
 
   const getInitials = (name) => {
     if (!name) return 'TR';
@@ -45,8 +47,8 @@ export const Sidebar = ({
     {
       groupTitle: 'MARKET PULSE',
       items: [
-        { id: 'indices', label: 'Live Indices & Stocks', icon: BarChart3, badge: 'Nifty/Sensex' },
-        { id: 'ipo', label: 'IPO Intelligence', icon: Rocket, badge: 'GMP / AI Score' },
+        { id: 'indices', label: 'Live Indices & Stocks', icon: BarChart3, badge: marketRegion === 'US' ? 'S&P 500 / NASDAQ' : 'Nifty/Sensex' },
+        { id: 'ipo', label: 'IPO Intelligence', icon: Rocket, badge: marketRegion === 'US' ? 'US Offerings' : 'GMP / AI Score' },
         { id: 'sentiment', label: 'Market Sentiment', icon: Gauge, badge: 'Fear/Greed' },
         { id: 'news', label: 'News Catalyst Trader', icon: Newspaper, badge: 'NLP Scoring' }
       ]
@@ -64,7 +66,7 @@ export const Sidebar = ({
     {
       groupTitle: 'EXECUTION & AUDIT',
       items: [
-        { id: 'calendar', label: 'P&L Calendar', icon: Calendar, badge: '+₹2.22L Mo' },
+        { id: 'calendar', label: 'P&L Calendar', icon: Calendar, badge: marketRegion === 'US' ? '+$12.4K Mo' : '+₹2.22L Mo' },
         { id: 'positions', label: 'Active Positions', icon: ShieldCheck, badge: 'Profit-Lock' },
         { id: 'today_audit', label: "Today's Live Audit", icon: Award, badge: 'Production A+' }
       ]

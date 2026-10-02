@@ -5,8 +5,15 @@
  */
 
 const { getTradeHistory } = require('./strategyEngine');
+const { getUSTradeHistory } = require('./usStrategyEngine');
+const { NSE_HOLIDAYS_2026 } = require('./realMarketService');
+const { US_HOLIDAYS_2026 } = require('./usMarketService');
 
-function getMonthPLData(month = null, year = null) {
+function getMonthPLData(month = null, year = null, market = 'IN') {
+  const isUS = (market || 'IN').toUpperCase() === 'US';
+  const currency = isUS ? '$' : '₹';
+  const locale = isUS ? 'en-US' : 'en-IN';
+  const holidays = isUS ? (US_HOLIDAYS_2026 || []) : NSE_HOLIDAYS_2026;
   const now = new Date();
   const currentYear = year || now.getFullYear();
   const currentMonth = month || (now.getMonth() + 1);
@@ -16,7 +23,7 @@ function getMonthPLData(month = null, year = null) {
   const calendarDays = [];
 
   // Group actual user closed paper trades by day of the month
-  const tradeHistory = getTradeHistory();
+  const tradeHistory = isUS ? (getUSTradeHistory() || []) : (getTradeHistory() || []);
   const dayTradesMap = {};
 
   tradeHistory.forEach(trade => {
@@ -52,6 +59,7 @@ function getMonthPLData(month = null, year = null) {
 
     const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     const dayData = dayTradesMap[day];
+    const holiday = (holidays || []).find(h => h.date === dateStr);
 
     if (isWeekend) {
       calendarDays.push({
@@ -63,6 +71,20 @@ function getMonthPLData(month = null, year = null) {
         status: 'MARKET_CLOSED',
         isMarketOpen: false,
         marketClosedReason: 'Exchange Closed (Saturday / Sunday Weekend)',
+        netPL: null,
+        tradesCount: 0
+      });
+    } else if (holiday && (!dayData || dayData.trades.length === 0)) {
+      calendarDays.push({
+        date: dateStr,
+        day,
+        dayOfWeek,
+        dayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dayOfWeek],
+        type: 'HOLIDAY',
+        status: 'HOLIDAY_CLOSED',
+        isMarketOpen: false,
+        marketClosedReason: `Exchange Closed (${holiday.name})`,
+        holidayName: holiday.name,
         netPL: null,
         tradesCount: 0
       });
@@ -143,15 +165,15 @@ function getMonthPLData(month = null, year = null) {
     firstDayOfWeekIndex,
     daysInMonth,
     summary: {
-      totalNetPL: `${totalNetPL >= 0 ? '+' : ''}₹${totalNetPL.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      totalNetPL: `${totalNetPL >= 0 ? '+' : ''}${currency}${totalNetPL.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       netPLRaw: totalNetPL,
       totalTrades,
       greenDays,
       redDays,
       winRate: `${winRate}%`,
       winStreak: greenDays > 0 ? `${greenDays} Day${greenDays > 1 ? 's' : ''}` : '0 Days',
-      avgDailyPL: `${avgDailyPL >= 0 ? '+' : ''}₹${avgDailyPL.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-      bestDay: bestDayPL > 0 ? `+₹${bestDayPL.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (${bestDayDate})` : '—'
+      avgDailyPL: `${avgDailyPL >= 0 ? '+' : ''}${currency}${avgDailyPL.toLocaleString(locale, { minimumFractionDigits: 2 })}`,
+      bestDay: bestDayPL > 0 ? `+${currency}${bestDayPL.toLocaleString(locale, { minimumFractionDigits: 2 })} (${bestDayDate})` : '—'
     },
     calendarDays
   };

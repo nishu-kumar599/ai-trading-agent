@@ -33,9 +33,11 @@ import {
   User
 } from 'lucide-react';
 import { MobileBottomNav } from './MobileBottomNav';
+import { useMarket } from '../context/MarketContext';
 
 export const Dashboard = () => {
   const { user } = useAuth();
+  const { marketRegion, setMarketRegion, toggleMarket, currency, formatCurrency, marketName } = useMarket();
   const [agentData, setAgentData] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeMainTab, setActiveMainTab] = useState('calendar'); // Open on Calendar / Audit
@@ -45,7 +47,7 @@ export const Dashboard = () => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Testing mode state & real market grounding
-  const [testBalance, setTestBalance] = useState(100000);
+  const [testBalance, setTestBalance] = useState(marketRegion === 'US' ? 25000 : 100000);
   const [testMessage, setTestMessage] = useState(null);
   const [isTestingAction, setIsTestingAction] = useState(false);
   const [activePositions, setActivePositions] = useState([]);
@@ -70,9 +72,9 @@ export const Dashboard = () => {
   const fetchRealDashboardData = async () => {
     try {
       const [posRes, quoteRes, detectRes] = await Promise.all([
-        fetch('/api/strategies/positions'),
-        fetch('/api/market/real-quotes'),
-        fetch('/api/market/real-detection')
+        fetch(`/api/strategies/positions?market=${marketRegion}`),
+        fetch(`/api/market/real-quotes?market=${marketRegion}`),
+        fetch(`/api/market/real-detection?market=${marketRegion}`)
       ]);
 
       const posText = await posRes.text();
@@ -104,7 +106,7 @@ export const Dashboard = () => {
     // High-frequency 2-second real-time dashboard updates (Groww style)
     const interval = setInterval(fetchRealDashboardData, 2000);
     return () => clearInterval(interval);
-  }, []);
+  }, [marketRegion]);
 
   const totalRealizedPL = tradeHistory.reduce((sum, t) => sum + (t.realizedPL || 0), 0);
   const totalUnrealizedPL = activePositions.reduce((sum, p) => sum + (p.unrealizedPL || 0), 0);
@@ -113,41 +115,74 @@ export const Dashboard = () => {
   const winRate = totalClosedTrades > 0 ? ((winCount / totalClosedTrades) * 100).toFixed(1) : '100.0';
   const currentCapital = testBalance + totalRealizedPL;
 
-  // Real market Nifty and breadth
-  const nifty = (marketDetection?.indices || []).find(i => i.symbol === '^NSEI' || i.name === 'NIFTY 50');
-  const niftyChange = nifty?.changePct || '-1.49%';
-  const advances = marketDetection?.marketBreadth?.advances || 1;
-  const declines = marketDetection?.marketBreadth?.declines || 14;
+  // Real market Benchmark Index & Breadth
+  const benchmarkIdx = marketRegion === 'US'
+    ? (marketDetection?.indices || []).find(i => i.symbol === '^GSPC' || i.name.includes('S&P 500'))
+    : (marketDetection?.indices || []).find(i => i.symbol === '^NSEI' || i.name.includes('NIFTY 50'));
+
+  const benchmarkName = marketRegion === 'US' ? 'S&P 500 & Wall St' : 'NSE NIFTY 50';
+  const benchmarkChange = benchmarkIdx?.changePct || (marketRegion === 'US' ? '+0.22%' : '-1.49%');
+  const advances = marketDetection?.breadth?.advances || marketDetection?.marketBreadth?.advances || (marketRegion === 'US' ? 7 : 1);
+  const declines = marketDetection?.breadth?.declines || marketDetection?.marketBreadth?.declines || (marketRegion === 'US' ? 3 : 14);
 
   const handleExecuteQuickTest = async (horizon) => {
     setIsTestingAction(true);
     try {
       let payload;
-      if (horizon === 'INTRADAY') {
-        const relStock = (realQuotes?.stocks || []).find(s => s.symbol === 'RELIANCE');
-        const relPrice = relStock?.price || 1198.80;
-        const relSignal = relStock?.intradaySignal || 'SELL';
-        payload = {
-          symbol: 'RELIANCE.NS',
-          horizon: 'INTRADAY',
-          direction: relSignal,
-          price: relPrice,
-          quantity: 50
-        };
+      if (marketRegion === 'US') {
+        if (horizon === 'INTRADAY') {
+          const nvda = (realQuotes?.stocks || []).find(s => s.symbol === 'NVDA');
+          payload = {
+            symbol: 'NVDA',
+            horizon: 'INTRADAY',
+            direction: 'BUY',
+            price: nvda?.price || 121.40,
+            quantity: 15,
+            market: 'US'
+          };
+        } else {
+          payload = {
+            symbol: 'SPY',
+            horizon: 'F_AND_O',
+            direction: 'BUY_CALL',
+            price: 4.25,
+            quantity: 10,
+            optionDetails: {
+              recommendedStrike: 'SPY $575 CALL',
+              premium: 4.25
+            },
+            market: 'US'
+          };
+        }
       } else {
-        const nPrice = nifty?.price || 22794.00;
-        const strike = Math.round(nPrice / 50) * 50;
-        payload = {
-          symbol: 'NIFTY 50',
-          horizon: 'F_AND_O',
-          direction: 'BUY_PUT',
-          price: +(nPrice * 0.024).toFixed(2),
-          quantity: 75,
-          optionDetails: {
-            recommendedStrike: `${strike} PE`,
-            premium: +(nPrice * 0.024).toFixed(2)
-          }
-        };
+        if (horizon === 'INTRADAY') {
+          const relStock = (realQuotes?.stocks || []).find(s => s.symbol === 'RELIANCE');
+          const relPrice = relStock?.price || 1198.80;
+          const relSignal = relStock?.intradaySignal || 'SELL';
+          payload = {
+            symbol: 'RELIANCE.NS',
+            horizon: 'INTRADAY',
+            direction: relSignal,
+            price: relPrice,
+            quantity: 50,
+            market: 'IN'
+          };
+        } else {
+          const nPrice = benchmarkIdx?.price || 22794.00;
+          const strike = Math.round(nPrice / 50) * 50;
+          payload = {
+            symbol: 'NIFTY 50',
+            horizon: 'F_AND_O',
+            direction: 'BUY_PUT',
+            price: +(nPrice * 0.024).toFixed(2),
+            quantity: 75,
+            optionDetails: {
+              recommendedStrike: `${strike} PE`,
+              premium: +(nPrice * 0.024).toFixed(2)
+            },
+            market: 'IN'
+          };
+        }
       }
 
       const res = await fetch('/api/strategies/execute', {
@@ -360,6 +395,65 @@ export const Dashboard = () => {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* Interactive Market Cockpit Slide Switcher */}
+            <div className="market-cockpit-toggle" style={{
+              display: 'flex',
+              alignItems: 'center',
+              background: 'rgba(255, 255, 255, 0.05)',
+              padding: '3px',
+              borderRadius: '10px',
+              border: '1px solid var(--border-subtle)',
+              gap: '2px'
+            }}>
+              <button
+                type="button"
+                onClick={() => setMarketRegion('IN')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '5px 12px',
+                  borderRadius: '7px',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  color: marketRegion === 'IN' ? '#10b981' : '#94a3b8',
+                  background: marketRegion === 'IN' ? 'rgba(16, 185, 129, 0.18)' : 'transparent',
+                  border: marketRegion === 'IN' ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid transparent',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: marketRegion === 'IN' ? '0 0 10px rgba(16, 185, 129, 0.2)' : 'none'
+                }}
+                title="Switch to Indian Stock Market (NSE / BSE)"
+              >
+                <span>🇮🇳</span>
+                <span>India (NSE)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMarketRegion('US')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '5px 12px',
+                  borderRadius: '7px',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  color: marketRegion === 'US' ? '#38bdf8' : '#94a3b8',
+                  background: marketRegion === 'US' ? 'rgba(56, 189, 248, 0.18)' : 'transparent',
+                  border: marketRegion === 'US' ? '1px solid rgba(56, 189, 248, 0.4)' : '1px solid transparent',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: marketRegion === 'US' ? '0 0 10px rgba(56, 189, 248, 0.2)' : 'none'
+                }}
+                title="Switch to US Stock Market (NYSE / NASDAQ)"
+              >
+                <span>🇺🇸</span>
+                <span>USA (NYSE)</span>
+              </button>
+            </div>
+
             {/* Quick Sizing & Risk Tool Trigger */}
             <button
               onClick={() => setIsCalculatorOpen(true)}
@@ -394,7 +488,7 @@ export const Dashboard = () => {
             }}>
               <span style={{ color: 'var(--text-dim)' }}>Month P&L:</span>
               <span style={{ color: totalRealizedPL >= 0 ? 'var(--accent-emerald)' : 'var(--danger)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
-                {totalRealizedPL >= 0 ? '+' : ''}₹{totalRealizedPL.toLocaleString('en-IN', { minimumFractionDigits: 2 })} ({winRate}% W)
+                {totalRealizedPL >= 0 ? '+' : ''}{currency}{totalRealizedPL.toLocaleString(marketRegion === 'US' ? 'en-US' : 'en-IN', { minimumFractionDigits: 2 })} ({winRate}% W)
               </span>
             </div>
 
@@ -451,7 +545,7 @@ export const Dashboard = () => {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#fff' }}>
-                    TESTING MODE ACTIVE (PAPER TRADING SANDBOX)
+                    TESTING MODE ACTIVE ({marketRegion === 'US' ? 'WALL STREET USD' : 'PAPER TRADING'} SANDBOX)
                   </span>
                   <span style={{
                     background: 'rgba(16, 185, 129, 0.15)',
@@ -466,7 +560,7 @@ export const Dashboard = () => {
                   </span>
                 </div>
                 <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '3px' }}>
-                  Paper Capital: <strong style={{ color: '#fff', fontFamily: 'var(--font-mono)' }}>₹{testBalance.toLocaleString()} INR</strong> • Test buy/sell algorithms, option calls, and stop-loss ratchets with 1 click.
+                  Paper Capital: <strong style={{ color: '#fff', fontFamily: 'var(--font-mono)' }}>{currency}{testBalance.toLocaleString(marketRegion === 'US' ? 'en-US' : 'en-IN')}</strong> • Test buy/sell algorithms, option calls, and stop-loss ratchets with 1 click.
                 </p>
               </div>
             </div>
@@ -492,7 +586,7 @@ export const Dashboard = () => {
                 }}
               >
                 <TrendingUp size={13} color="var(--accent-emerald)" />
-                Test Buy Reliance (Intraday)
+                {marketRegion === 'US' ? 'Test Buy NVDA (Intraday)' : 'Test Buy Reliance (Intraday)'}
               </button>
 
               <button
@@ -514,7 +608,7 @@ export const Dashboard = () => {
                 }}
               >
                 <Layers size={13} color="var(--accent-cyan)" />
-                Test Buy Nifty 24500 CE
+                {marketRegion === 'US' ? 'Test Buy SPY $575 Call' : 'Test Buy Nifty 24500 CE'}
               </button>
 
               <button
@@ -598,10 +692,10 @@ export const Dashboard = () => {
                 <span>Account Capital</span>
                 <BarChart2 size={16} color="var(--accent-cyan)" />
               </div>
-              <div className="stat-card-value">₹{currentCapital.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+              <div className="stat-card-value">{currency}{currentCapital.toLocaleString(marketRegion === 'US' ? 'en-US' : 'en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
               <div className="stat-card-tag stat-tag-positive">
                 <ArrowUpRight size={14} />
-                Unrealized: {totalUnrealizedPL >= 0 ? '+' : ''}₹{totalUnrealizedPL.toFixed(2)} ({activePositions.length} Open)
+                Unrealized: {totalUnrealizedPL >= 0 ? '+' : ''}{currency}{totalUnrealizedPL.toFixed(2)} ({activePositions.length} Open)
               </div>
             </div>
 
@@ -611,7 +705,7 @@ export const Dashboard = () => {
                 <DollarSign size={16} color={totalRealizedPL >= 0 ? 'var(--accent-emerald)' : 'var(--danger)'} />
               </div>
               <div className="stat-card-value" style={{ color: totalRealizedPL >= 0 ? 'var(--accent-emerald)' : 'var(--danger)' }}>
-                {totalRealizedPL >= 0 ? '+' : ''}₹{totalRealizedPL.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {totalRealizedPL >= 0 ? '+' : ''}{currency}{totalRealizedPL.toLocaleString(marketRegion === 'US' ? 'en-US' : 'en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
               <div className="stat-card-tag" style={{ color: totalRealizedPL >= 0 ? 'var(--accent-emerald)' : 'var(--danger)' }}>
                 <Sparkles size={14} />
@@ -621,15 +715,15 @@ export const Dashboard = () => {
 
             <div className="stat-card">
               <div className="stat-card-title">
-                <span>NSE Nifty & Market Breadth</span>
-                <ShieldCheck size={16} color={String(niftyChange || '').startsWith('-') ? 'var(--danger)' : 'var(--accent-emerald)'} />
+                <span>{benchmarkName}</span>
+                <ShieldCheck size={16} color={String(benchmarkChange || '').startsWith('-') ? 'var(--danger)' : 'var(--accent-emerald)'} />
               </div>
-              <div className="stat-card-value" style={{ color: String(niftyChange || '').startsWith('-') ? '#f87171' : 'var(--accent-emerald)' }}>
-                {nifty?.price ? `₹${nifty.price.toLocaleString('en-IN')}` : '₹22,794.00'}
+              <div className="stat-card-value" style={{ color: String(benchmarkChange || '').startsWith('-') ? '#f87171' : 'var(--accent-emerald)' }}>
+                {benchmarkPrice}
               </div>
-              <div className="stat-card-tag" style={{ color: String(niftyChange || '').startsWith('-') ? '#f87171' : 'var(--accent-emerald)' }}>
+              <div className="stat-card-tag" style={{ color: String(benchmarkChange || '').startsWith('-') ? '#f87171' : 'var(--accent-emerald)' }}>
                 <CheckCircle2 size={14} />
-                {niftyChange} • {advances} Adv / {declines} Dec
+                {benchmarkChange} • {advances} Adv / {declines} Dec
               </div>
             </div>
 

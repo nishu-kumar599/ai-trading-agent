@@ -310,6 +310,166 @@ async function updateUserProfile(id, { name, phone }) {
   return await findUserById(id);
 }
 
+// -------------------------------------------------------------
+// Trade & Position Persistence (MongoDB + Dual JSON Disk Fallback)
+// -------------------------------------------------------------
+
+function getTradesFilePath(market = 'IN') {
+  return path.join(DATA_DIR, market === 'US' ? 'trades_us.json' : 'trades.json');
+}
+
+function getPositionsFilePath(market = 'IN') {
+  return path.join(DATA_DIR, market === 'US' ? 'positions_us.json' : 'positions.json');
+}
+
+function readTradesFromDisk(market = 'IN') {
+  try {
+    const file = getTradesFilePath(market);
+    if (fs.existsSync(file)) {
+      const data = fs.readFileSync(file, 'utf-8');
+      return JSON.parse(data || '[]');
+    }
+  } catch (err) {
+    console.error(`Error reading ${market} trades from disk:`, err.message);
+  }
+  return [];
+}
+
+function writeTradesToDisk(trades, market = 'IN') {
+  try {
+    const file = getTradesFilePath(market);
+    fs.writeFileSync(file, JSON.stringify(trades, null, 2), 'utf-8');
+  } catch (err) {
+    console.error(`Error writing ${market} trades to disk:`, err.message);
+  }
+}
+
+function readPositionsFromDisk(market = 'IN') {
+  try {
+    const file = getPositionsFilePath(market);
+    if (fs.existsSync(file)) {
+      const data = fs.readFileSync(file, 'utf-8');
+      return JSON.parse(data || '[]');
+    }
+  } catch (err) {
+    console.error(`Error reading ${market} positions from disk:`, err.message);
+  }
+  return [];
+}
+
+function writePositionsToDisk(positions, market = 'IN') {
+  try {
+    const file = getPositionsFilePath(market);
+    fs.writeFileSync(file, JSON.stringify(positions, null, 2), 'utf-8');
+  } catch (err) {
+    console.error(`Error writing ${market} positions to disk:`, err.message);
+  }
+}
+
+async function saveTrade(trade, market = 'IN') {
+  if (!trade || !trade.id) return null;
+  trade.market = trade.market || market;
+
+  // 1. Save to local disk JSON
+  const trades = readTradesFromDisk(trade.market);
+  const existingIdx = trades.findIndex(t => t.id === trade.id);
+  if (existingIdx >= 0) {
+    trades[existingIdx] = { ...trades[existingIdx], ...trade };
+  } else {
+    trades.unshift(trade);
+  }
+  writeTradesToDisk(trades, trade.market);
+
+  // 2. Persist to MongoDB if connected
+  if (isMongoConnected()) {
+    try {
+      const Trade = require('./models/Trade');
+      await Trade.findOneAndUpdate(
+        { id: trade.id },
+        { ...trade, market: trade.market },
+        { upsert: true, new: true }
+      );
+    } catch (err) {
+      console.warn('Mongo saveTrade warning:', err.message);
+    }
+  }
+
+  return trade;
+}
+
+async function loadAllTrades(market = 'IN') {
+  let diskTrades = readTradesFromDisk(market);
+
+  if (isMongoConnected()) {
+    try {
+      const Trade = require('./models/Trade');
+      const mongoTrades = await Trade.find({ market }).sort({ closedAt: -1, createdAt: -1 }).lean();
+      
+      if (mongoTrades && mongoTrades.length > 0) {
+        // Merge with disk trades to ensure zero loss
+        const map = new Map();
+        mongoTrades.forEach(t => map.set(t.id, t));
+        diskTrades.forEach(t => {
+          if (!map.has(t.id)) map.set(t.id, t);
+        });
+        const combined = Array.from(map.values());
+        writeTradesToDisk(combined, market);
+        return combined;
+      } else if (diskTrades.length > 0) {
+        // Seed MongoDB from disk
+        for (const t of diskTrades) {
+          await Trade.findOneAndUpdate({ id: t.id }, { ...t, market }, { upsert: true });
+        }
+      }
+    } catch (err) {
+      console.warn('Mongo loadAllTrades fallback to disk:', err.message);
+    }
+  }
+
+  return diskTrades;
+}
+
+async function saveActivePositions(positions, market = 'IN') {
+  const safePositions = positions || [];
+  writePositionsToDisk(safePositions, market);
+
+  if (isMongoConnected()) {
+    try {
+      const Position = require('./models/Position');
+      // Sync positions: delete stale and upsert active
+      const activeIds = safePositions.map(p => p.id);
+      await Position.deleteMany({ market, id: { $nin: activeIds } });
+      for (const pos of safePositions) {
+        await Position.findOneAndUpdate(
+          { id: pos.id },
+          { ...pos, market },
+          { upsert: true }
+        );
+      }
+    } catch (err) {
+      console.warn('Mongo saveActivePositions warning:', err.message);
+    }
+  }
+}
+
+async function loadActivePositions(market = 'IN') {
+  let diskPositions = readPositionsFromDisk(market);
+
+  if (isMongoConnected()) {
+    try {
+      const Position = require('./models/Position');
+      const mongoPositions = await Position.find({ market }).lean();
+      if (mongoPositions && mongoPositions.length > 0) {
+        return mongoPositions;
+      }
+    } catch (err) {
+      console.warn('Mongo loadActivePositions fallback to disk:', err.message);
+    }
+  }
+
+  return diskPositions;
+}
+
 module.exports = {
   findUserByEmail,
   findUserById,
@@ -320,5 +480,9 @@ module.exports = {
   changeUserPassword,
   updateUserProfile,
   readUsers: readUsersFromDisk,
-  syncUsersWithMongo
+  syncUsersWithMongo,
+  saveTrade,
+  loadAllTrades,
+  saveActivePositions,
+  loadActivePositions
 };

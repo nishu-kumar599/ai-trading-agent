@@ -1,0 +1,31 @@
+[
+  {
+    "id": "pos_1790944180532_6iz31m",
+    "symbol": "TCS.NS",
+    "horizon": "INTRADAY",
+    "direction": "BUY",
+    "entryPrice": 2075.2,
+    "currentPrice": 2075.2,
+    "stopLoss": 2054.45,
+    "target1": 2116.7,
+    "target2": 2158.21,
+    "quantity": 10,
+    "breakevenActivated": false,
+    "trailingPct": 0.008,
+    "unrealizedPL": 0,
+    "unrealizedPLPct": 0,
+    "status": "MANUALLY_CLOSED",
+    "isAMO": true,
+    "underlyingSpotAtEntry": 2075.2,
+    "openedAt": "2026-10-02T12:29:40.532Z",
+    "exitPrice": 2075.2,
+    "grossPL": 0,
+    "brokerageCharges": 45,
+    "netRealizedPL": -45,
+    "realizedPL": -45,
+    "realizedPLPct": -0.22,
+    "outcome": "LOSS",
+    "closedAt": "2026-10-02T12:29:40.535Z",
+    "market": "IN"
+  }
+]

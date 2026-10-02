@@ -28,8 +28,10 @@ import {
   Target
 } from 'lucide-react';
 import { CandlestickModal } from './CandlestickModal';
+import { useMarket } from '../context/MarketContext';
 
 export const AutoPilotCockpit = () => {
+  const { marketRegion, currency, formatCurrency } = useMarket();
   const [agentData, setAgentData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [actionNotice, setActionNotice] = useState('');
@@ -39,7 +41,7 @@ export const AutoPilotCockpit = () => {
 
   const fetchAgentStatus = async () => {
     try {
-      const res = await fetch('/api/ai-agent/status');
+      const res = await fetch(`/api/ai-agent/status?market=${marketRegion}`);
       const text = await res.text();
       const data = text ? JSON.parse(text) : null;
       if (data && data.success && data.status) {
@@ -54,12 +56,16 @@ export const AutoPilotCockpit = () => {
     fetchAgentStatus();
     const interval = setInterval(fetchAgentStatus, 2500); // Poll status every 2.5s
     return () => clearInterval(interval);
-  }, []);
+  }, [marketRegion]);
 
   const handleToggleAutoPilot = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/ai-agent/toggle', { method: 'POST' });
+      const res = await fetch('/api/ai-agent/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ market: marketRegion })
+      });
       const data = await res.json();
       if (data.success) {
         setActionNotice(data.message);
@@ -75,9 +81,13 @@ export const AutoPilotCockpit = () => {
 
   const handleTriggerCycle = async () => {
     setTriggeringScan(true);
-    setActionNotice('Running autonomous multi-segment market scan & probability ranking...');
+    setActionNotice(`Running autonomous ${marketRegion === 'US' ? 'US (Wall Street)' : 'multi-segment'} market scan & probability ranking...`);
     try {
-      const res = await fetch('/api/ai-agent/trigger-scan', { method: 'POST' });
+      const res = await fetch('/api/ai-agent/trigger-scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ market: marketRegion })
+      });
       const data = await res.json();
       if (data.success) {
         setActionNotice('Autonomous scan cycle completed.');
@@ -105,10 +115,14 @@ export const AutoPilotCockpit = () => {
 
     setIsPanicking(true);
     try {
-      const res = await fetch('/api/ai-agent/panic-exit-all', { method: 'POST' });
+      const res = await fetch('/api/ai-agent/panic-exit-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ market: marketRegion })
+      });
       const data = await res.json();
       if (data.success) {
-        setActionNotice(`🚨 Emergency Exit Complete: Liquidated ${data.liquidatedCount} positions. Net P&L: ₹${data.totalNetPL >= 0 ? '+' : ''}${data.totalNetPL.toFixed(2)}.`);
+        setActionNotice(`🚨 Emergency Exit Complete: Liquidated ${data.liquidatedCount} positions. Net P&L: ${currency}${data.totalNetPL >= 0 ? '+' : ''}${data.totalNetPL.toFixed(2)}.`);
         await fetchAgentStatus();
       }
     } catch (err) {
@@ -125,7 +139,7 @@ export const AutoPilotCockpit = () => {
       const res = await fetch('/api/ai-agent/risk-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profile })
+        body: JSON.stringify({ profile, market: marketRegion })
       });
       const data = await res.json();
       if (data.success) {
@@ -147,6 +161,7 @@ export const AutoPilotCockpit = () => {
       return;
     }
 
+    const curLabel = currency === '$' ? 'USD' : 'INR';
     const headers = [
       'Trade ID',
       'Opened Time',
@@ -154,12 +169,12 @@ export const AutoPilotCockpit = () => {
       'Symbol',
       'Segment',
       'Direction',
-      'Entry Price (INR)',
-      'Exit Price (INR)',
+      `Entry Price (${curLabel})`,
+      `Exit Price (${curLabel})`,
       'Quantity',
-      'Gross P&L (INR)',
-      'Brokerage & Tax (INR)',
-      'Net Realized P&L (INR)',
+      `Gross P&L (${curLabel})`,
+      `Brokerage & Tax (${curLabel})`,
+      `Net Realized P&L (${curLabel})`,
       'Return %',
       'Outcome',
       'Exit Reason',
@@ -177,7 +192,7 @@ export const AutoPilotCockpit = () => {
       t.exitPrice || 0,
       t.quantity || 0,
       t.grossPL !== undefined ? t.grossPL : t.realizedPL || 0,
-      t.brokerageCharges !== undefined ? t.brokerageCharges : 45.0,
+      t.brokerageCharges !== undefined ? t.brokerageCharges : (marketRegion === 'US' ? 1.00 : 45.0),
       t.netRealizedPL !== undefined ? t.netRealizedPL : t.realizedPL || 0,
       t.realizedPLPct || 0,
       `"${t.outcome || (t.realizedPL > 0 ? 'WIN' : (t.realizedPL === 0 ? 'BREAKEVEN' : 'LOSS'))}"`,
@@ -190,19 +205,24 @@ export const AutoPilotCockpit = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `ai_trading_ledger_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `ai_trading_ledger_${marketRegion.toLowerCase()}_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   const handleReset = async () => {
-    if (!window.confirm('Reset Autonomous AI Agent state, capital to ₹100,000, and clear trade logs?')) return;
+    const defaultCap = marketRegion === 'US' ? '$25,000' : '₹100,000';
+    if (!window.confirm(`Reset Autonomous AI Agent state, capital to ${defaultCap}, and clear trade logs?`)) return;
     try {
-      const res = await fetch('/api/ai-agent/reset-state', { method: 'POST' });
+      const res = await fetch('/api/ai-agent/reset-state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ market: marketRegion })
+      });
       const data = await res.json();
       if (data.success) {
-        setActionNotice('Sandbox reset to ₹100,000 with clean logs.');
+        setActionNotice(`Sandbox reset to ${defaultCap} with clean logs.`);
         await fetchAgentStatus();
       }
     } catch (err) {
@@ -268,7 +288,9 @@ export const AutoPilotCockpit = () => {
             }}>
               <span className="pulse-dot" style={{ background: isAutoPilotActive ? (agentData?.isMarketOpen ? '#10b981' : '#f59e0b') : '#94a3b8' }}></span>
               {isAutoPilotActive 
-                ? (agentData?.isMarketOpen ? 'AI AUTONOMOUS AGENT ACTIVE (NSE/BSE LIVE)' : 'AI AUTO-PILOT STANDBY • MARKET CLOSED') 
+                ? (agentData?.isMarketOpen 
+                    ? (marketRegion === 'US' ? 'AI AUTONOMOUS AGENT ACTIVE (NYSE/NASDAQ LIVE)' : 'AI AUTONOMOUS AGENT ACTIVE (NSE/BSE LIVE)') 
+                    : (marketRegion === 'US' ? 'AI AUTO-PILOT STANDBY • US MARKET CLOSED' : 'AI AUTO-PILOT STANDBY • NSE MARKET CLOSED')) 
                 : 'AI AUTO-PILOT PAUSED'}
             </span>
 
@@ -303,7 +325,7 @@ export const AutoPilotCockpit = () => {
               border: '1px solid rgba(56, 189, 248, 0.25)'
             }}>
               <Clock size={12} />
-              Auto-Squareoff @ 15:15 IST
+              Auto-Squareoff @ {riskGuard.marketCloseSquareoffTime || (marketRegion === 'US' ? '15:55 EST' : '15:15 IST')}
             </span>
 
             {/* Two-Stage Profit Booking Badge */}
@@ -325,10 +347,10 @@ export const AutoPilotCockpit = () => {
           </div>
 
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.5px', margin: '4px 0 8px 0' }}>
-            Autonomous Multi-Segment AI Trading Sentinel
+            {marketRegion === 'US' ? 'Wall Street Autonomous AI Trading Sentinel' : 'Autonomous Multi-Segment AI Trading Sentinel'}
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: '1.5', margin: 0 }}>
-            Automatically scans <strong>Intraday (Long & Short Selling)</strong>, <strong>F&O Options (Calls & Puts)</strong>, and <strong>Swing Breakouts</strong>. It aligns with <strong>NIFTY 50 Market Regime</strong>, enforces <strong>Two-Stage Profit Booking (50% scale-out at Target 1)</strong>, guarantees Zero-Loss Breakeven protection, and <strong>self-learns from every trade outcome</strong>.
+            Automatically scans <strong>{marketRegion === 'US' ? 'NYSE & NASDAQ Stocks' : 'Intraday (Long & Short Selling)'}</strong>, <strong>{marketRegion === 'US' ? 'Options & Tech Momentum' : 'F&O Options (Calls & Puts)'}</strong>, and <strong>Swing Breakouts</strong>. It aligns with <strong>{marketRegion === 'US' ? 'S&P 500 Market Regime' : 'NIFTY 50 Market Regime'}</strong>, enforces <strong>Two-Stage Profit Booking (50% scale-out at Target 1)</strong>, guarantees Zero-Loss Breakeven protection, and <strong>self-learns from every trade outcome</strong>.
           </p>
 
           {/* Market Closed Standby Notice */}
@@ -347,9 +369,13 @@ export const AutoPilotCockpit = () => {
             }}>
               <Clock size={18} style={{ flexShrink: 0, marginTop: '2px', color: '#f59e0b' }} />
               <div>
-                <strong style={{ color: '#fef3c7' }}>NSE/BSE Exchange is Closed (Trading Hours: 09:15 AM - 03:30 PM IST):</strong>
+                <strong style={{ color: '#fef3c7' }}>
+                  {marketRegion === 'US' ? 'NYSE / NASDAQ Exchange is Closed (Trading Hours: 09:30 AM - 04:00 PM EST):' : 'NSE/BSE Exchange is Closed (Trading Hours: 09:15 AM - 03:30 PM IST):'}
+                </strong>
                 <div style={{ color: '#fde68a', marginTop: '2px', lineHeight: '1.4' }}>
-                  Stock, index, and option prices are frozen at official closing settlement prices (matching Zerodha and Groww). Auto-pilot executions and simulated price fluctuations are paused. The AI Agent will resume live autonomous scanning and order placement at 09:15 AM IST on the next trading day.
+                  {marketRegion === 'US'
+                    ? 'Stock and index prices are frozen at official NYSE/NASDAQ closing settlement prices. The AI Agent will resume live autonomous scanning at 09:30 AM EST on the next trading day.'
+                    : 'Stock, index, and option prices are frozen at official closing settlement prices (matching Zerodha and Groww). Auto-pilot executions and simulated price fluctuations are paused. The AI Agent will resume live autonomous scanning and order placement at 09:15 AM IST on the next trading day.'}
                 </div>
               </div>
             </div>
@@ -652,7 +678,7 @@ export const AutoPilotCockpit = () => {
           <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '12px 14px' }}>
             <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 700 }}>CASH FLOOR RESERVE</div>
             <div style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--accent-emerald)', marginTop: '2px' }}>
-              ₹{Number(riskGuard.minCashFloor || 70000).toLocaleString('en-IN')}
+              {currency}{Number(riskGuard.minCashFloor || (marketRegion === 'US' ? 17500 : 70000)).toLocaleString(currency === '$' ? 'en-US' : 'en-IN')}
             </div>
             <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '2px' }}>
               Wallet cash floor strictly protected
@@ -663,10 +689,10 @@ export const AutoPilotCockpit = () => {
           <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '12px 14px' }}>
             <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 700 }}>BROKERAGE & TAXES</div>
             <div style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#f59e0b', marginTop: '2px' }}>
-              ₹{riskGuard.brokeragePerTrade || 45}/trade
+              {currency}{riskGuard.brokeragePerTrade || (marketRegion === 'US' ? 1.00 : 45)}/trade
             </div>
             <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              ₹40 round-trip + ₹5 taxes factored in Net P&L
+              {marketRegion === 'US' ? '$1 SEC & regulatory fee factored in Net P&L' : '₹40 round-trip + ₹5 taxes factored in Net P&L'}
             </div>
           </div>
         </div>
@@ -759,11 +785,11 @@ export const AutoPilotCockpit = () => {
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                      <span>Entry: <strong>₹{pos.entryPrice}</strong></span>
-                      <span>Live: <strong>₹{pos.currentPrice}</strong></span>
-                      <span>SL: <strong style={{ color: '#f87171' }}>₹{pos.stopLoss}</strong></span>
-                      <span>Target 1: <strong style={{ color: '#34d399' }}>₹{pos.target1}</strong></span>
-                      <span>Target 2: <strong style={{ color: '#10b981' }}>₹{pos.target2}</strong></span>
+                      <span>Entry: <strong>{currency}{pos.entryPrice}</strong></span>
+                      <span>Live: <strong>{currency}{pos.currentPrice}</strong></span>
+                      <span>SL: <strong style={{ color: '#f87171' }}>{currency}{pos.stopLoss}</strong></span>
+                      <span>Target 1: <strong style={{ color: '#34d399' }}>{currency}{pos.target1}</strong></span>
+                      <span>Target 2: <strong style={{ color: '#10b981' }}>{currency}{pos.target2}</strong></span>
                     </div>
                   </div>
 
@@ -775,7 +801,7 @@ export const AutoPilotCockpit = () => {
                         fontFamily: 'var(--font-mono)',
                         color: isProfit ? 'var(--accent-emerald)' : 'var(--danger)'
                       }}>
-                        {isProfit ? '+' : ''}₹{pos.unrealizedPL || 0}
+                        {isProfit ? '+' : ''}{currency}{pos.unrealizedPL || 0}
                       </div>
                       <div style={{ fontSize: '0.72rem', color: isProfit ? 'var(--accent-emerald)' : 'var(--danger)' }}>
                         {isProfit ? '+' : ''}{pos.unrealizedPLPct || 0}%
@@ -864,10 +890,10 @@ export const AutoPilotCockpit = () => {
             fontFamily: 'var(--font-mono)',
             color: (accuracy.totalRealizedPL || 0) >= 0 ? 'var(--accent-emerald)' : 'var(--danger)'
           }}>
-            {(accuracy.totalRealizedPL || 0) >= 0 ? '+' : ''}₹{Number(accuracy.totalRealizedPL || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            {(accuracy.totalRealizedPL || 0) >= 0 ? '+' : ''}{currency}{Number(accuracy.totalRealizedPL || 0).toLocaleString(currency === '$' ? 'en-US' : 'en-IN', { minimumFractionDigits: 2 })}
           </div>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-            Gross: +₹{Number(accuracy.totalGrossProfit || 0).toFixed(2)} | Brokerage/Taxes: -₹{Number(accuracy.totalBrokeragePaid || 0).toFixed(2)}
+            Gross: +{currency}{Number(accuracy.totalGrossProfit || 0).toFixed(2)} | Brokerage/Taxes: -{currency}{Number(accuracy.totalBrokeragePaid || 0).toFixed(2)}
           </div>
         </div>
 
@@ -918,10 +944,10 @@ export const AutoPilotCockpit = () => {
             fontFamily: 'var(--font-mono)',
             color: '#fff'
           }}>
-            ₹{Number(accuracy.virtualCapital || 100000).toLocaleString('en-IN')}
+            {currency}{Number(accuracy.virtualCapital || (marketRegion === 'US' ? 25000 : 100000)).toLocaleString(currency === '$' ? 'en-US' : 'en-IN')}
           </div>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-            Invested: ₹{riskGuard.currentInvested || 0} | Free: ₹{riskGuard.freeCapital || 100000}
+            Invested: {currency}{riskGuard.currentInvested || 0} | Free: {currency}{riskGuard.freeCapital || (marketRegion === 'US' ? 25000 : 100000)}
           </div>
         </div>
       </div>
@@ -1067,7 +1093,7 @@ export const AutoPilotCockpit = () => {
               {segments.intradayLong?.winRatePct || 100}%
             </div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-              {segments.intradayLong?.total || 0} Trades • Net P&L: ₹{segments.intradayLong?.pl || 0}
+              {segments.intradayLong?.total || 0} Trades • Net P&L: {currency}{segments.intradayLong?.pl || 0}
             </div>
           </div>
 
@@ -1078,7 +1104,7 @@ export const AutoPilotCockpit = () => {
               {segments.intradayShort?.winRatePct || 100}%
             </div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-              {segments.intradayShort?.total || 0} Trades • Net P&L: ₹{segments.intradayShort?.pl || 0}
+              {segments.intradayShort?.total || 0} Trades • Net P&L: {currency}{segments.intradayShort?.pl || 0}
             </div>
           </div>
 
@@ -1089,7 +1115,7 @@ export const AutoPilotCockpit = () => {
               {segments.optionsCalls?.winRatePct || 100}%
             </div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-              {segments.optionsCalls?.total || 0} Trades • Net P&L: ₹{segments.optionsCalls?.pl || 0}
+              {segments.optionsCalls?.total || 0} Trades • Net P&L: {currency}{segments.optionsCalls?.pl || 0}
             </div>
           </div>
 
@@ -1100,7 +1126,7 @@ export const AutoPilotCockpit = () => {
               {segments.optionsPuts?.winRatePct || 100}%
             </div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-              {segments.optionsPuts?.total || 0} Trades • Net P&L: ₹{segments.optionsPuts?.pl || 0}
+              {segments.optionsPuts?.total || 0} Trades • Net P&L: {currency}{segments.optionsPuts?.pl || 0}
             </div>
           </div>
 
@@ -1111,7 +1137,7 @@ export const AutoPilotCockpit = () => {
               {segments.swingTrading?.winRatePct || 100}%
             </div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-              {segments.swingTrading?.total || 0} Trades • Net P&L: ₹{segments.swingTrading?.pl || 0}
+              {segments.swingTrading?.total || 0} Trades • Net P&L: {currency}{segments.swingTrading?.pl || 0}
             </div>
           </div>
         </div>

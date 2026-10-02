@@ -1,23 +1,32 @@
 {
   "modelName": "reinforcement_v1",
-  "totalTradesAnalyzed": 1,
-  "consecutiveWins": 1,
-  "consecutiveLosses": 0,
-  "baseScoreThreshold": 80,
+  "totalTradesAnalyzed": 2,
+  "consecutiveWins": 0,
+  "consecutiveLosses": 1,
+  "baseScoreThreshold": 81,
   "learnedAccuracyRate": 100,
   "weights": {
     "rsiWeight": 12.25,
     "vwapWeight": 12.3,
     "emaWeight": 10,
-    "volumeWeight": 8.2,
+    "volumeWeight": 8.7,
     "riskRewardMultiplier": 1
   },
   "segmentMultipliers": {
-    "INTRADAY": 1.03,
+    "INTRADAY": 0.98,
     "F_AND_O": 1,
     "SHORT_TERM": 1
   },
   "evolutionLogs": [
+    {
+      "timestamp": "2026-10-02T12:29:40.535Z",
+      "tradeId": "pos_1790944180532_6iz31m",
+      "symbol": "TCS.NS",
+      "outcome": "LOSS",
+      "pnl": -45,
+      "insight": "Loss registered on TCS.NS (Net -₹45.00). Raised entry score threshold to 81 and tightened volume requirements.",
+      "weightAdjustment": "Threshold: 81, VolReq: 8.7, Multiplier (INTRADAY): 0.98"
+    },
     {
       "timestamp": "2026-09-30T09:54:55.975Z",
       "tradeId": "test_win_001",

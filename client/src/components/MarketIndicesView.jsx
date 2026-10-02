@@ -15,10 +15,12 @@ import {
   ShieldCheck,
   Activity
 } from 'lucide-react';
+import { useMarket } from '../context/MarketContext';
 
 export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
+  const { marketRegion, currency, formatCurrency } = useMarket();
   const [activeCategory, setActiveCategory] = useState('ALL');
-  const [lastRefreshed, setLastRefreshed] = useState(new Date().toLocaleTimeString('en-IN'));
+  const [lastRefreshed, setLastRefreshed] = useState(new Date().toLocaleTimeString(currency === '$' ? 'en-US' : 'en-IN'));
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncNotice, setSyncNotice] = useState('');
@@ -170,7 +172,7 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
   const fetchMarketDetection = async (showLoading = false) => {
     if (showLoading) setIsLoading(true);
     try {
-      const res = await fetch('/api/market/real-detection');
+      const res = await fetch(`/api/market/real-detection?market=${marketRegion}`);
       const text = await res.text();
       const data = text ? JSON.parse(text) : null;
       if (data && data.success) {
@@ -210,7 +212,7 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
         if (data.isMarketOpen !== undefined) setIsMarketOpen(data.isMarketOpen);
         if (data.nextSessionMessage) setSessionMessage(data.nextSessionMessage);
 
-        setLastRefreshed(data.lastSynced || new Date().toLocaleTimeString('en-IN'));
+        setLastRefreshed(data.lastSynced || new Date().toLocaleTimeString(currency === '$' ? 'en-US' : 'en-IN'));
       }
     } catch (err) {
       console.warn('Failed to load market detection:', err);
@@ -224,11 +226,11 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
     setIsSyncing(true);
     setSyncNotice('');
     try {
-      const res = await fetch('/api/market/sync', { method: 'POST' });
+      const res = await fetch(`/api/market/sync?market=${marketRegion}`, { method: 'POST' });
       const text = await res.text();
       const data = text ? JSON.parse(text) : null;
       if (data && data.success) {
-        setSyncNotice(`Synced live exchange data for ${data.stocksCount} NSE equities & indices!`);
+        setSyncNotice(`Synced live exchange data for ${data.stocksCount} ${marketRegion === 'US' ? 'US (Wall Street)' : 'NSE'} equities & indices!`);
         await fetchMarketDetection(false);
       } else {
         setSyncNotice('Sync completed.');
@@ -245,7 +247,7 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
     fetchMarketDetection(true);
     const interval = setInterval(() => fetchMarketDetection(false), 1500); // 1.5s live streaming ticker
     return () => clearInterval(interval);
-  }, []);
+  }, [marketRegion]);
 
   const filteredStocks = stocksUniverse.filter(stock => {
     if (activeCategory === 'ALL') return true;
@@ -284,9 +286,11 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px'
-            }} title={sessionMessage || (isMarketOpen ? 'Live Market Trading (09:15 - 15:30 IST)' : 'Market Closed • Prices frozen at settlement')}>
+            }} title={sessionMessage || (isMarketOpen ? 'Live Market Trading' : 'Market Closed • Prices frozen at settlement')}>
               <Wifi size={12} />
-              {isMarketOpen ? 'AUTHENTIC NSE/BSE REAL MARKET FEEDS' : 'MARKET CLOSED • SETTLED CLOSING PRICES'}
+              {isMarketOpen 
+                ? (marketRegion === 'US' ? 'AUTHENTIC NYSE/NASDAQ REAL MARKET FEEDS' : 'AUTHENTIC NSE/BSE REAL MARKET FEEDS')
+                : 'MARKET CLOSED • SETTLED CLOSING PRICES'}
             </span>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
               Last Synced: {lastRefreshed}
@@ -297,7 +301,7 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
             Live Market Overview & Index Detection
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '2px' }}>
-            100% genuine live market prices for benchmark indices & top NSE equities with automated quantitative indicators.
+            100% genuine live market prices for benchmark indices & top {marketRegion === 'US' ? 'NYSE/NASDAQ' : 'NSE'} equities with automated quantitative indicators.
           </p>
         </div>
 
@@ -313,7 +317,7 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
             alignItems: 'center',
             gap: '10px'
           }}>
-            <span style={{ color: 'var(--text-dim)' }}>NSE Breadth:</span>
+            <span style={{ color: 'var(--text-dim)' }}>{marketRegion === 'US' ? 'Wall St Breadth:' : 'NSE Breadth:'}</span>
             <span style={{ color: 'var(--accent-emerald)', fontWeight: 700 }}>{marketBreadth.advances} Advances</span>
             <span style={{ color: '#475569' }}>/</span>
             <span style={{ color: 'var(--danger)', fontWeight: 700 }}>{marketBreadth.declines} Declines</span>
@@ -407,7 +411,7 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
                     color: idx.tickDirection === 'UP' ? 'var(--accent-emerald)' : (idx.tickDirection === 'DOWN' ? '#f87171' : '#fff'),
                     transition: 'color 0.25s ease'
                   }}>
-                    ₹{Number(idx.value || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {currency}{Number(idx.value || 0).toLocaleString(currency === '$' ? 'en-US' : 'en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                   <span style={{
                     fontFamily: 'var(--font-mono)',
@@ -439,9 +443,9 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
               {/* Day Range Slider & Metrics */}
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-dim)', marginBottom: '4px' }}>
-                  <span>Low: ₹{Number(idx.dayLow || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
+                  <span>Low: {currency}{Number(idx.dayLow || 0).toLocaleString(currency === '$' ? 'en-US' : 'en-IN', { maximumFractionDigits: 2 })}</span>
                   <span>Day Range</span>
-                  <span>High: ₹{Number(idx.dayHigh || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
+                  <span>High: {currency}{Number(idx.dayHigh || 0).toLocaleString(currency === '$' ? 'en-US' : 'en-IN', { maximumFractionDigits: 2 })}</span>
                 </div>
                 <div style={{ width: '100%', height: '5px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '3px', position: 'relative' }}>
                   <div style={{
@@ -454,7 +458,7 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                   <span>RSI (14): <strong style={{ color: idx.rsi < 35 ? 'var(--danger)' : '#fff' }}>{idx.rsi}</strong></span>
-                  <span>52W High: <strong style={{ color: '#fff' }}>₹{Number(idx.fiftyTwoWeekHigh || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</strong></span>
+                  <span>52W High: <strong style={{ color: '#fff' }}>{currency}{Number(idx.fiftyTwoWeekHigh || 0).toLocaleString(currency === '$' ? 'en-US' : 'en-IN', { maximumFractionDigits: 2 })}</strong></span>
                 </div>
               </div>
             </div>
@@ -560,7 +564,7 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
                           color: stock.tickDirection === 'UP' ? 'var(--accent-emerald)' : (stock.tickDirection === 'DOWN' ? '#f87171' : '#fff'),
                           transition: 'color 0.25s ease'
                         }}>
-                          ₹{Number(stock.price || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          {currency}{Number(stock.price || 0).toLocaleString(currency === '$' ? 'en-US' : 'en-IN', { minimumFractionDigits: 2 })}
                         </span>
                         {stock.tickDirection && stock.tickDirection !== 'SAME' && (
                           <span style={{
@@ -590,7 +594,7 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
                     </td>
 
                     <td style={{ padding: '12px 14px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
-                      ₹{Number(stock.vwap || stock.price || 0).toFixed(2)}
+                      {currency}{Number(stock.vwap || stock.price || 0).toFixed(2)}
                     </td>
 
                     <td style={{ padding: '12px 14px', fontFamily: 'var(--font-mono)' }}>

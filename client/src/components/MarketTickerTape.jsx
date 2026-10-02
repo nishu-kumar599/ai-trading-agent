@@ -1,17 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Activity, Wifi } from 'lucide-react';
+import { useMarket } from '../context/MarketContext';
 
 export const MarketTickerTape = ({ onSelectTicker }) => {
-  const [ticks, setTicks] = useState([
-    { symbol: 'NIFTY 50', price: 22794.95, change: -345.55, pct: '-1.49%', isUp: false, isIndex: true },
-    { symbol: 'SENSEX', price: 72851.70, change: -1044.00, pct: '-1.41%', isUp: false, isIndex: true },
-    { symbol: 'BANK NIFTY', price: 54489.70, change: -1725.85, pct: '-3.07%', isUp: false, isIndex: true },
-    { symbol: 'RELIANCE', price: 1198.80, change: -41.60, pct: '-3.35%', isUp: false, isIndex: false },
-    { symbol: 'TCS', price: 2075.20, change: -29.80, pct: '-1.42%', isUp: false, isIndex: false },
-    { symbol: 'HDFCBANK', price: 719.10, change: -16.50, pct: '-2.24%', isUp: false, isIndex: false },
-    { symbol: 'M&M', price: 2995.00, change: -49.50, pct: '-1.63%', isUp: false, isIndex: false },
-    { symbol: 'INFY', price: 1540.20, change: -24.80, pct: '-1.58%', isUp: false, isIndex: false }
-  ]);
+  const { marketRegion, currency } = useMarket();
+  const [ticks, setTicks] = useState([]);
   const [isLiveStream, setIsLiveStream] = useState(true);
   const [sessionInfo, setSessionInfo] = useState({
     isOpen: true,
@@ -23,7 +16,7 @@ export const MarketTickerTape = ({ onSelectTicker }) => {
   // Fetch real market quotes
   const fetchLiveQuotes = async () => {
     try {
-      const res = await fetch('/api/market/real-quotes');
+      const res = await fetch(`/api/market/real-quotes?market=${marketRegion}`);
       const text = await res.text();
       const data = text ? JSON.parse(text) : null;
       if (data && data.success) {
@@ -133,7 +126,7 @@ export const MarketTickerTape = ({ onSelectTicker }) => {
           alignItems: 'center',
           gap: '4px'
         }}>
-          {sessionInfo.isOpen ? 'REAL MARKET' : 'MARKET CLOSED'}
+          {marketRegion === 'US' ? '🇺🇸 NYSE/NASDAQ' : '🇮🇳 NSE/BSE'}: {sessionInfo.isOpen ? 'LIVE' : 'CLOSED'}
         </span>
       </div>
 
@@ -163,7 +156,7 @@ export const MarketTickerTape = ({ onSelectTicker }) => {
               cursor: 'pointer',
               userSelect: 'none'
             }}
-            title={`${item.symbol}: ₹${item.price} (${item.pct})`}
+            title={`${item.symbol}: ${currency}${item.price} (${item.pct})`}
           >
             <span style={{
               fontWeight: 700,
@@ -178,7 +171,7 @@ export const MarketTickerTape = ({ onSelectTicker }) => {
               fontWeight: 700,
               color: '#fff'
             }}>
-              ₹{Number(item.price || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {currency}{Number(item.price || 0).toLocaleString(marketRegion === 'US' ? 'en-US' : 'en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
 
             <span style={{

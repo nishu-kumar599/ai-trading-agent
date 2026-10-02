@@ -18,8 +18,10 @@ import {
   Lock,
   Info
 } from 'lucide-react';
+import { useMarket } from '../context/MarketContext';
 
 export const PLCalendar = () => {
+  const { marketRegion, currency, formatCurrency } = useMarket();
   const [calendarData, setCalendarData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [selectedDayTrades, setSelectedDayTrades] = useState(null);
@@ -30,7 +32,7 @@ export const PLCalendar = () => {
   const fetchCalendar = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/strategies/calendar?month=${currentMonth}&year=${currentYear}`);
+      const res = await fetch(`/api/strategies/calendar?month=${currentMonth}&year=${currentYear}&market=${marketRegion}`);
       const text = await res.text();
       const data = text ? JSON.parse(text) : null;
       if (data && data.success) {
@@ -45,7 +47,7 @@ export const PLCalendar = () => {
 
   useEffect(() => {
     fetchCalendar();
-  }, [currentMonth, currentYear]);
+  }, [currentMonth, currentYear, marketRegion]);
 
   const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const summary = calendarData?.summary;
@@ -155,11 +157,11 @@ export const PLCalendar = () => {
             <DollarSign size={16} color="var(--accent-emerald)" />
           </div>
           <div className="stat-card-value" style={{ color: 'var(--accent-emerald)' }}>
-            {summary?.totalNetPL || '+₹2,22,920.00'}
+            {summary?.totalNetPL || `${currency}0.00`}
           </div>
           <div className="stat-card-tag stat-tag-positive">
             <ArrowUpRight size={14} />
-            {summary?.totalTrades || 93} Completed Trades
+            {summary?.totalTrades || 0} Completed Trades
           </div>
         </div>
 
@@ -169,11 +171,11 @@ export const PLCalendar = () => {
             <Award size={16} color="#38bdf8" />
           </div>
           <div className="stat-card-value">
-            {summary?.greenDays || 18}W <span style={{ color: 'var(--text-dim)', fontSize: '1rem' }}>/</span> <span style={{ color: 'var(--danger)' }}>{summary?.redDays || 1}L</span>
+            {summary?.greenDays || 0}W <span style={{ color: 'var(--text-dim)', fontSize: '1rem' }}>/</span> <span style={{ color: 'var(--danger)' }}>{summary?.redDays || 0}L</span>
           </div>
           <div className="stat-card-tag" style={{ color: 'var(--accent-emerald)' }}>
             <CheckCircle2 size={14} />
-            {summary?.winRate || '94.7%'} Green Day Win Rate
+            {summary?.winRate || '0.0%'} Green Day Win Rate
           </div>
         </div>
 
@@ -183,10 +185,10 @@ export const PLCalendar = () => {
             <Sparkles size={16} color="#f59e0b" />
           </div>
           <div className="stat-card-value" style={{ color: '#f59e0b' }}>
-            {summary?.winStreak || '10 Days'}
+            {summary?.winStreak || '0 Days'}
           </div>
           <div className="stat-card-tag" style={{ color: '#38bdf8' }}>
-            Avg Daily: {summary?.avgDailyPL || '+₹11,732'}
+            Avg Daily: {summary?.avgDailyPL || `${currency}0.00`}
           </div>
         </div>
 
@@ -196,10 +198,10 @@ export const PLCalendar = () => {
             <TrendingUp size={16} color="var(--accent-emerald)" />
           </div>
           <div className="stat-card-value" style={{ fontSize: '1.25rem', color: 'var(--accent-emerald)' }}>
-            {summary?.bestDay?.split(' ')[0] || '+₹21,400.00'}
+            {summary?.bestDay?.split(' ')[0] || `${currency}0.00`}
           </div>
           <div className="stat-card-tag" style={{ color: 'var(--text-dim)' }}>
-            Sep 18 Multi-Breakout Rally
+            Peak Momentum Session
           </div>
         </div>
       </div>
@@ -464,7 +466,7 @@ export const PLCalendar = () => {
                       color: 'var(--accent-emerald)',
                       marginTop: '4px'
                     }}>
-                      +₹{dayObj.netPL.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                      +{currency}{dayObj.netPL.toLocaleString(currency === '$' ? 'en-US' : 'en-IN', { maximumFractionDigits: 0 })}
                     </div>
                   )}
 
@@ -476,7 +478,7 @@ export const PLCalendar = () => {
                       color: 'var(--danger)',
                       marginTop: '4px'
                     }}>
-                      -₹{Math.abs(dayObj.netPL).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                      -{currency}{Math.abs(dayObj.netPL).toLocaleString(currency === '$' ? 'en-US' : 'en-IN', { maximumFractionDigits: 0 })}
                     </div>
                   )}
 
@@ -557,7 +559,7 @@ export const PLCalendar = () => {
                   fontFamily: 'var(--font-mono)',
                   color: selectedDayTrades.netPL >= 0 ? 'var(--accent-emerald)' : 'var(--danger)'
                 }}>
-                  {selectedDayTrades.netPL >= 0 ? `+₹${selectedDayTrades.netPL.toLocaleString()}` : `-₹${Math.abs(selectedDayTrades.netPL).toLocaleString()}`}
+                  {selectedDayTrades.netPL >= 0 ? `+${currency}${selectedDayTrades.netPL.toLocaleString(currency === '$' ? 'en-US' : 'en-IN')}` : `-${currency}${Math.abs(selectedDayTrades.netPL).toLocaleString(currency === '$' ? 'en-US' : 'en-IN')}`}
                 </div>
               </div>
 
@@ -598,7 +600,7 @@ export const PLCalendar = () => {
                     color: tr.pl >= 0 ? 'var(--accent-emerald)' : 'var(--danger)',
                     fontSize: '0.9rem'
                   }}>
-                    {tr.pl >= 0 ? `+₹${tr.pl.toLocaleString()}` : `-₹${Math.abs(tr.pl).toLocaleString()}`}
+                    {tr.pl >= 0 ? `+${currency}${tr.pl.toLocaleString(currency === '$' ? 'en-US' : 'en-IN')}` : `-${currency}${Math.abs(tr.pl).toLocaleString(currency === '$' ? 'en-US' : 'en-IN')}`}
                   </div>
                 </div>
               ))}

@@ -21,8 +21,10 @@ import {
   Sparkles
 } from 'lucide-react';
 import { AutoPilotCockpit } from './AutoPilotCockpit';
+import { useMarket } from '../context/MarketContext';
 
 export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs = false }) => {
+  const { marketRegion, currency, formatCurrency } = useMarket();
   const [selectedHorizon, setSelectedHorizon] = useState(initialHorizon);
 
   useEffect(() => {
@@ -35,7 +37,7 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
   const [activePositions, setActivePositions] = useState([]);
   const [tradeHistory, setTradeHistory] = useState([]);
   const [selectedStockToTrade, setSelectedStockToTrade] = useState(null);
-  const [orderQuantity, setOrderQuantity] = useState(50);
+  const [orderQuantity, setOrderQuantity] = useState(marketRegion === 'US' ? 10 : 50);
   const [executingOrder, setExecutingOrder] = useState(false);
   const [executionNotice, setExecutionNotice] = useState('');
   const [isMarketOpen, setIsMarketOpen] = useState(true);
@@ -57,7 +59,7 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
   const fetchScan = async (horizon) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/strategies/scan?horizon=${horizon}`);
+      const res = await fetch(`/api/strategies/scan?horizon=${horizon}&market=${marketRegion}`);
       const text = await res.text();
       const data = text ? JSON.parse(text) : null;
       if (data && data.success) {
@@ -75,7 +77,7 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
   // Fetch positions & history
   const fetchPositions = async () => {
     try {
-      const res = await fetch('/api/strategies/positions');
+      const res = await fetch(`/api/strategies/positions?market=${marketRegion}`);
       const text = await res.text();
       const data = text ? JSON.parse(text) : null;
       if (data && data.success) {
@@ -96,7 +98,7 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
     // High-frequency live real-time positions & P&L polling (Groww / Zerodha style)
     const posInterval = setInterval(fetchPositions, 2000);
     return () => clearInterval(posInterval);
-  }, [selectedHorizon]);
+  }, [selectedHorizon, marketRegion]);
 
   // Execute trade
   const handleExecuteTrade = async (stock) => {
@@ -109,8 +111,9 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
         horizon: selectedHorizon,
         direction: stock.action,
         price: isFO ? stock.optPremium : stock.price,
-        quantity: isFO ? stock.lotSize : orderQuantity,
-        optionDetails: isFO ? { recommendedStrike: stock.recommendedStrike, premium: stock.optPremium } : null
+        quantity: isFO ? (stock.lotSize || 10) : orderQuantity,
+        optionDetails: isFO ? { recommendedStrike: stock.recommendedStrike, premium: stock.optPremium } : null,
+        market: marketRegion
       };
 
       const res = await fetch('/api/strategies/execute', {
@@ -122,7 +125,7 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
       const data = text ? JSON.parse(text) : null;
 
       if (data && data.success) {
-        setExecutionNotice(`Order Executed: ${data.trade.symbol} (${data.trade.direction}) @ ₹${data.trade.entryPrice} with Profit-Lock Guard!`);
+        setExecutionNotice(`Order Executed: ${data.trade.symbol} (${data.trade.direction}) @ ${currency}${data.trade.entryPrice} with Profit-Lock Guard!`);
         fetchPositions();
         setSelectedStockToTrade(null);
         setTimeout(() => setExecutionNotice(''), 6000);

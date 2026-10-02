@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const tradeSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
+  market: { type: String, enum: ['IN', 'US'], default: 'IN' },
   symbol: { type: String, required: true },
   baseSymbol: { type: String },
   horizon: { type: String, enum: ['INTRADAY', 'SHORT_TERM', 'MEDIUM_TERM', 'LONG_TERM', 'F_AND_O'], default: 'INTRADAY' },

@@ -17,18 +17,26 @@ import {
   Download
 } from 'lucide-react';
 
+import { useMarket } from '../context/MarketContext';
+
 export const TodayMarketAudit = () => {
+  const { marketRegion, currency, formatCurrency } = useMarket();
   const [auditData, setAuditData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('TODAY'); // 'TODAY' | 'HISTORICAL'
 
   const fetchAudit = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/strategies/today-audit');
+      const res = await fetch(`/api/strategies/today-audit?market=${marketRegion}`);
       const text = await res.text();
       const data = text ? JSON.parse(text) : null;
       if (data && data.success) {
         setAuditData(data.audit);
+        // If today has zero trades but there are historical trades, auto-focus historical tab
+        if ((!data.audit.trades || data.audit.trades.length === 0) && (data.audit.historicalTrades?.length > 0)) {
+          setActiveTab('HISTORICAL');
+        }
       }
     } catch (err) {
       console.error('Failed to load today audit:', err);
@@ -38,12 +46,16 @@ export const TodayMarketAudit = () => {
   };
 
   const handleDownloadAuditCSV = () => {
-    const trades = auditData?.trades || [];
+    const trades = activeTab === 'TODAY' && auditData?.trades?.length > 0
+      ? auditData.trades
+      : (auditData?.historicalTrades?.length > 0 ? auditData.historicalTrades : (auditData?.trades || []));
+
     if (trades.length === 0) {
-      alert('No trades recorded in today session to export.');
+      alert('No trades recorded in database to export.');
       return;
     }
 
+    const curLabel = currency === '$' ? 'USD' : 'INR';
     const headers = [
       'Trade ID',
       'Time',
@@ -51,11 +63,11 @@ export const TodayMarketAudit = () => {
       'Segment',
       'Direction',
       'Strategy',
-      'Entry Price (INR)',
-      'Exit Price (INR)',
+      `Entry Price (${curLabel})`,
+      `Exit Price (${curLabel})`,
       'Quantity',
-      'Invested Amount (INR)',
-      'Realized P&L (INR)',
+      `Invested Amount (${curLabel})`,
+      `Realized P&L (${curLabel})`,
       'Realized P&L %',
       'Status',
       'Exit Reason',
@@ -85,7 +97,7 @@ export const TodayMarketAudit = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `today_market_audit_ledger_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `market_audit_${marketRegion.toLowerCase()}_${activeTab.toLowerCase()}_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -93,7 +105,7 @@ export const TodayMarketAudit = () => {
 
   useEffect(() => {
     fetchAudit();
-  }, []);
+  }, [marketRegion]);
 
   const summary = auditData?.summary;
 
@@ -203,11 +215,11 @@ export const TodayMarketAudit = () => {
             <DollarSign size={16} color="#10b981" />
           </div>
           <div className="stat-card-value" style={{ color: '#10b981' }}>
-            {summary?.totalRealizedProfit ?? '₹0.00'}
+            {summary?.totalRealizedProfit ?? `${currency}0.00`}
           </div>
           <div className="stat-card-tag stat-tag-positive">
             <ArrowUpRight size={14} />
-            {summary?.netReturnPercentage ?? '0.00%'} on ₹100k Capital
+            {summary?.netReturnPercentage ?? '0.00%'} on {currency}{marketRegion === 'US' ? '25k' : '100k'} Capital
           </div>
         </div>
 
@@ -295,104 +307,161 @@ export const TodayMarketAudit = () => {
 
       {/* Detailed Trade-by-Trade Execution Audit Table */}
       <div className="signals-table-card">
-        <div className="table-header">
+        <div className="table-header" style={{ flexWrap: 'wrap', gap: '12px' }}>
           <div>
             <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#fff' }}>
-              Individual Trades Audited Today
+              Execution Audit Ledger & Trade History
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: '2px' }}>
               Full chronological audit log of entry prices, exit prices, profit-lock adjustments, and realized returns
             </p>
           </div>
-          <span className="badge-signal-buy">
-            {auditData?.trades?.length || 0} Trades Recorded
-          </span>
-        </div>
 
-        {(!auditData?.trades || auditData.trades.length === 0) ? (
-          <div style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--text-dim)', fontSize: '0.88rem' }}>
-            <ShieldCheck size={28} color="var(--accent-emerald)" style={{ marginBottom: '8px', opacity: 0.8 }} />
-            <div>No live paper trades executed yet today.</div>
-            <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-              Place a paper order in Strategy Center or Quick Execution to begin real-time session audit.
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setActiveTab('TODAY')}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '8px',
+                border: 'none',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                background: activeTab === 'TODAY' ? 'var(--accent-emerald)' : 'rgba(255,255,255,0.06)',
+                color: activeTab === 'TODAY' ? '#fff' : 'var(--text-muted)'
+              }}
+            >
+              Today's Session ({auditData?.trades?.length || 0})
+            </button>
+            <button
+              onClick={() => setActiveTab('HISTORICAL')}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '8px',
+                border: 'none',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                background: activeTab === 'HISTORICAL' ? '#38bdf8' : 'rgba(255,255,255,0.06)',
+                color: activeTab === 'HISTORICAL' ? '#0f172a' : 'var(--text-muted)'
+              }}
+            >
+              Database Trade Archive ({auditData?.historicalTrades?.length || 0})
+            </button>
           </div>
-        ) : (
-          <div className="table-responsive" style={{ overflowX: 'auto' }}>
-            <table className="signals-table">
-              <thead>
-                <tr>
-                  <th>Time & ID</th>
-                  <th>Symbol & Segment</th>
-                  <th>Direction</th>
-                  <th>Entry Price</th>
-                  <th>Exit Price</th>
-                  <th>Realized P&L</th>
-                  <th>Status</th>
-                  <th>Zero-Loss Protection Verification</th>
-                </tr>
-              </thead>
-              <tbody>
-                {auditData?.trades?.map((t) => {
-                const plNum = Number(t.realizedPL || 0);
-                const pctNum = Number(t.realizedPLPct || 0);
-                const isWin = t.status === 'WIN' || plNum > 0;
-                const isBreakeven = t.status === 'BREAKEVEN' || plNum === 0;
-                const directionStr = String(t.direction || 'BUY');
-
-                return (
-                  <tr key={t.id}>
-                    <td>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', color: '#94a3b8' }}>{t.time}</div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>{t.id}</div>
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 600, color: '#fff' }}>{t.symbol}</div>
-                      <div style={{ fontSize: '0.72rem', color: '#93c5fd' }}>{t.segment} • {t.strategy}</div>
-                    </td>
-                    <td>
-                      <span className={directionStr.includes('BUY') ? 'badge-signal-buy' : 'badge-signal-hold'} style={{
-                        background: directionStr.includes('PUT') || directionStr === 'SELL' ? 'rgba(244, 63, 94, 0.15)' : undefined,
-                        color: directionStr.includes('PUT') || directionStr === 'SELL' ? '#fda4af' : undefined
-                      }}>
-                        {directionStr}
-                      </span>
-                    </td>
-                    <td style={{ fontFamily: 'var(--font-mono)' }}>₹{t.entryPrice}</td>
-                    <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#fff' }}>₹{t.exitPrice}</td>
-                    <td>
-                      <div style={{
-                        fontFamily: 'var(--font-mono)',
-                        fontWeight: 700,
-                        color: plNum > 0 ? '#34d399' : (isBreakeven ? '#38bdf8' : '#f43f5e')
-                      }}>
-                        {plNum >= 0 ? '+' : ''}₹{plNum.toFixed(2)} ({pctNum >= 0 ? '+' : ''}{pctNum.toFixed(2)}%)
-                      </div>
-                    </td>
-                    <td>
-                      <span style={{
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                        padding: '3px 8px',
-                        borderRadius: '6px',
-                        background: isWin ? 'rgba(16, 185, 129, 0.15)' : 'rgba(6, 182, 212, 0.15)',
-                        color: isWin ? '#34d399' : '#38bdf8',
-                        border: `1px solid ${isWin ? 'rgba(16, 185, 129, 0.3)' : 'rgba(6, 182, 212, 0.3)'}`
-                      }}>
-                        {t.status}
-                      </span>
-                    </td>
-                    <td style={{ fontSize: '0.78rem', color: '#cbd5e1', maxWidth: '320px', lineHeight: '1.4' }}>
-                      {t.protectionNote}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
         </div>
-      )}
+
+        {(() => {
+          const currentList = activeTab === 'TODAY' ? (auditData?.trades || []) : (auditData?.historicalTrades || []);
+          if (currentList.length === 0) {
+            return (
+              <div style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--text-dim)', fontSize: '0.88rem' }}>
+                <ShieldCheck size={28} color="var(--accent-emerald)" style={{ marginBottom: '8px', opacity: 0.8 }} />
+                <div>
+                  {activeTab === 'TODAY' 
+                    ? "No paper trades executed yet in today's session." 
+                    : 'No past historical trades in persistent database yet.'}
+                </div>
+                {activeTab === 'TODAY' && (auditData?.historicalTrades?.length || 0) > 0 && (
+                  <div style={{ marginTop: '12px' }}>
+                    <button
+                      onClick={() => setActiveTab('HISTORICAL')}
+                      style={{
+                        padding: '6px 16px',
+                        borderRadius: '6px',
+                        background: 'rgba(56, 189, 248, 0.15)',
+                        border: '1px solid rgba(56, 189, 248, 0.3)',
+                        color: '#38bdf8',
+                        cursor: 'pointer',
+                        fontSize: '0.8rem',
+                        fontWeight: 700
+                      }}
+                    >
+                      View {auditData.historicalTrades.length} Trades from Database Archive →
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          return (
+            <div className="table-responsive" style={{ overflowX: 'auto' }}>
+              <table className="signals-table">
+                <thead>
+                  <tr>
+                    <th>Time & ID</th>
+                    <th>Symbol & Segment</th>
+                    <th>Direction</th>
+                    <th>Entry Price</th>
+                    <th>Exit Price</th>
+                    <th>Realized P&L</th>
+                    <th>Status</th>
+                    <th>Zero-Loss Protection Verification</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentList.map((t) => {
+                    const plNum = Number(t.realizedPL || 0);
+                    const pctNum = Number(t.realizedPLPct || 0);
+                    const isWin = t.status === 'WIN' || plNum > 0;
+                    const isBreakeven = t.status === 'BREAKEVEN' || plNum === 0;
+                    const directionStr = String(t.direction || 'BUY');
+
+                    return (
+                      <tr key={t.id}>
+                        <td>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', color: '#94a3b8' }}>{t.time}</div>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>{t.id}</div>
+                        </td>
+                        <td>
+                          <div style={{ fontWeight: 600, color: '#fff' }}>{t.symbol}</div>
+                          <div style={{ fontSize: '0.72rem', color: '#93c5fd' }}>{t.segment} • {t.strategy}</div>
+                        </td>
+                        <td>
+                          <span className={directionStr.includes('BUY') ? 'badge-signal-buy' : 'badge-signal-hold'} style={{
+                            background: directionStr.includes('PUT') || directionStr === 'SELL' ? 'rgba(244, 63, 94, 0.15)' : undefined,
+                            color: directionStr.includes('PUT') || directionStr === 'SELL' ? '#fda4af' : undefined
+                          }}>
+                            {directionStr}
+                          </span>
+                        </td>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>{currency}{t.entryPrice}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#fff' }}>{currency}{t.exitPrice}</td>
+                        <td>
+                          <div style={{
+                            fontFamily: 'var(--font-mono)',
+                            fontWeight: 700,
+                            color: plNum > 0 ? '#34d399' : (isBreakeven ? '#38bdf8' : '#f43f5e')
+                          }}>
+                            {plNum >= 0 ? '+' : ''}{currency}{Math.abs(plNum).toFixed(2)} ({pctNum >= 0 ? '+' : ''}{pctNum.toFixed(2)}%)
+                          </div>
+                        </td>
+                        <td>
+                          <span style={{
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            background: isWin ? 'rgba(16, 185, 129, 0.15)' : 'rgba(6, 182, 212, 0.15)',
+                            color: isWin ? '#34d399' : '#38bdf8',
+                            border: `1px solid ${isWin ? 'rgba(16, 185, 129, 0.3)' : 'rgba(6, 182, 212, 0.3)'}`
+                          }}>
+                            {t.status}
+                          </span>
+                        </td>
+                        <td style={{ fontSize: '0.78rem', color: '#cbd5e1', maxWidth: '320px', lineHeight: '1.4' }}>
+                          {t.protectionNote}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
+      </div>
     </div>
-  </div>
   );
 };

@@ -11,11 +11,31 @@
  * Automatically adjusts Stop-Loss to Breakeven when in profit and trails to lock gains.
  */
 
-// In-memory active paper positions (starts clean, populated only by genuine real-time paper executions)
+const { saveTrade, loadAllTrades, saveActivePositions, loadActivePositions } = require('../db');
+
+// In-memory active paper positions
 let activePositions = [];
 
-// Closed trades history (starts clean, populated only when real paper positions are closed)
+// Closed trades history
 let tradeHistory = [];
+
+// Asynchronously hydrate from MongoDB / disk cache on boot
+(async () => {
+  try {
+    const loadedTrades = await loadAllTrades('IN');
+    if (loadedTrades && loadedTrades.length > 0) {
+      tradeHistory = loadedTrades;
+      console.log(`📦 [Strategy Engine] Restored ${tradeHistory.length} trades from database.`);
+    }
+    const loadedPositions = await loadActivePositions('IN');
+    if (loadedPositions && loadedPositions.length > 0) {
+      activePositions = loadedPositions;
+      console.log(`📦 [Strategy Engine] Restored ${activePositions.length} active positions from database.`);
+    }
+  } catch (err) {
+    console.warn('Initial strategyEngine load error:', err.message);
+  }
+})();
 
 const STRATEGY_CATALOG = {
   INTRADAY: {
@@ -343,6 +363,7 @@ function executeTrade({ symbol, horizon, direction, price, quantity, optionDetai
   };
 
   activePositions.unshift(newPosition);
+  saveActivePositions(activePositions, 'IN');
   return newPosition;
 }
 
@@ -410,6 +431,8 @@ function tickPosition(id, newPrice) {
     // Move to history
     tradeHistory.unshift(closed);
     activePositions.splice(posIndex, 1);
+    saveTrade(closed, 'IN');
+    saveActivePositions(activePositions, 'IN');
 
     // AI Self-Learning feedback
     try {
@@ -445,6 +468,8 @@ function closePosition(id) {
     closedAt: new Date().toISOString()
   };
   tradeHistory.unshift(closed);
+  saveTrade(closed, 'IN');
+  saveActivePositions(activePositions, 'IN');
 
   // AI Self-Learning feedback
   try {
@@ -458,6 +483,7 @@ function closePosition(id) {
 function resetTestSandbox() {
   activePositions = [];
   tradeHistory = [];
+  saveActivePositions([], 'IN');
   return { success: true, activePositions, tradeHistory, balance: 100000 };
 }
 
@@ -507,6 +533,46 @@ function updateAndGetActivePositions(realQuotes = null) {
       }
     });
   }
+
+  // Auto-square off lingering intraday positions when market is closed (or on holidays)
+  if (!session.isOpen && activePositions.length > 0) {
+    let squaredAny = false;
+    for (let i = activePositions.length - 1; i >= 0; i--) {
+      const pos = activePositions[i];
+      if (pos.horizon === 'INTRADAY' && !pos.isAMO && pos.status !== 'AMO_PENDING_OPEN') {
+        const [squaredPos] = activePositions.splice(i, 1);
+        const grossPL = squaredPos.unrealizedPL || 0;
+        const brokerageCharges = 45.0;
+        const netRealizedPL = +(grossPL - brokerageCharges).toFixed(2);
+        const realizedPLPct = +((netRealizedPL / (squaredPos.entryPrice * squaredPos.quantity)) * 100).toFixed(2);
+        const outcome = netRealizedPL > 0 ? 'WIN' : (netRealizedPL === 0 ? 'BREAKEVEN' : 'LOSS');
+        const closed = {
+          ...squaredPos,
+          exitPrice: squaredPos.currentPrice || squaredPos.entryPrice,
+          grossPL,
+          brokerageCharges,
+          netRealizedPL,
+          realizedPL: netRealizedPL,
+          realizedPLPct,
+          outcome,
+          status: 'MARKET_CLOSE_SQUAREOFF',
+          exitReason: 'MARKET_CLOSE_SQUAREOFF',
+          closedAt: new Date().toISOString()
+        };
+        tradeHistory.unshift(closed);
+        saveTrade(closed, 'IN');
+        squaredAny = true;
+        try {
+          const { recordTradeOutcome } = require('./aiLearningEngine');
+          recordTradeOutcome(closed);
+        } catch (e) {}
+      }
+    }
+    if (squaredAny) {
+      saveActivePositions(activePositions, 'IN');
+    }
+  }
+
   return activePositions;
 }
 

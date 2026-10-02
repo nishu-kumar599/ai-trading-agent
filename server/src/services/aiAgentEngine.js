@@ -25,6 +25,7 @@ const fs = require('fs');
 const path = require('path');
 const { getRealQuotes, getRealMarketUniverse, getMarketSessionInfo } = require('./realMarketService');
 const { isMongoConnected } = require('../config/database');
+const { saveTrade, saveActivePositions, loadAllTrades, loadActivePositions } = require('../db');
 const { 
   recordTradeOutcome, 
   getLearnedScoreModifier, 
@@ -150,10 +151,18 @@ function detectMarketRegime(quotes) {
 // Load persisted state safely (MongoDB primary with local JSON fallback)
 async function loadPersistedState() {
   try {
+    const loadedTrades = await loadAllTrades('IN');
+    if (loadedTrades && loadedTrades.length > 0) {
+      state.tradeHistory = loadedTrades;
+    }
+
+    const loadedPositions = await loadActivePositions('IN');
+    if (loadedPositions && loadedPositions.length > 0) {
+      state.activePositions = loadedPositions;
+    }
+
     if (isMongoConnected()) {
       const AgentState = require('../models/AgentState');
-      const Trade = require('../models/Trade');
-
       const savedState = await AgentState.findOne({ key: 'primary_sentinel' }).lean();
       if (savedState) {
         state.isAutoPilotActive = savedState.isAutoPilotActive !== undefined ? savedState.isAutoPilotActive : state.isAutoPilotActive;
@@ -168,20 +177,6 @@ async function loadPersistedState() {
         state.minCashReserveRatio = savedState.minCashReserveRatio || 0.70;
         state.decisionLogs = savedState.decisionLogs || [];
       }
-
-      const activeFromDb = await Trade.find({ status: { $in: ['ACTIVE_RUNNING', 'PROFIT_LOCKED', 'TARGET_1_PARTIAL_PROFIT'] } }).lean();
-      if (activeFromDb && activeFromDb.length > 0) {
-        state.activePositions = activeFromDb;
-      }
-
-      const historyFromDb = await Trade.find({ status: { $nin: ['ACTIVE_RUNNING', 'PROFIT_LOCKED', 'TARGET_1_PARTIAL_PROFIT'] } })
-        .sort({ closedAt: -1 })
-        .limit(100)
-        .lean();
-      if (historyFromDb && historyFromDb.length > 0) {
-        state.tradeHistory = historyFromDb;
-      }
-
       console.log('🍃 [AI Agent] State & Trades successfully synced from MongoDB Cloud Database.');
       return;
     }
@@ -192,8 +187,8 @@ async function loadPersistedState() {
       state = {
         ...state,
         ...loaded,
-        activePositions: loaded.activePositions || [],
-        tradeHistory: loaded.tradeHistory || [],
+        activePositions: loaded.activePositions || state.activePositions,
+        tradeHistory: loaded.tradeHistory || state.tradeHistory,
         decisionLogs: loaded.decisionLogs || []
       };
       console.log('📁 [AI Agent] State loaded from local JSON file.');
@@ -210,10 +205,10 @@ async function persistState() {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(STATE_FILE_PATH, JSON.stringify(state, null, 2), 'utf8');
 
+    await saveActivePositions(state.activePositions, 'IN');
+
     if (isMongoConnected()) {
       const AgentState = require('../models/AgentState');
-      const Trade = require('../models/Trade');
-
       await AgentState.findOneAndUpdate(
         { key: 'primary_sentinel' },
         {
@@ -231,14 +226,6 @@ async function persistState() {
         },
         { upsert: true, new: true }
       );
-
-      for (const pos of state.activePositions) {
-        await Trade.findOneAndUpdate(
-          { id: pos.id },
-          pos,
-          { upsert: true }
-        );
-      }
     }
   } catch (err) {
     console.error('[AI Agent] Failed to persist state:', err.message);
@@ -621,12 +608,14 @@ async function monitorAndManagePositions(realQuotes) {
       pos.unrealizedPL = +(priceDiff * pos.quantity).toFixed(2);
       pos.unrealizedPLPct = +((priceDiff / pos.entryPrice) * 100).toFixed(2);
 
-      // When market is closed, hold overnight positions safely at closing price
+      // When market is closed (or on holidays), hold swing/long-term positions safely at closing price
+      // All intraday positions must be auto-squared off at market close/holiday!
       if (!session.isOpen) {
-        if (pos.horizon === 'INTRADAY' && isMarketCloseSquareoffTime) {
+        if (pos.horizon === 'INTRADAY' && pos.status !== 'AMO_PENDING_OPEN') {
           // Intraday position must be auto-squared off at market close
+          closeReason = 'MARKET_CLOSE_SQUAREOFF';
         } else {
-          continue; // Freeze position safely; do not trigger stops/targets after hours
+          continue; // Freeze non-intraday position safely; do not trigger stops/targets after hours
         }
       }
 
@@ -683,19 +672,20 @@ async function monitorAndManagePositions(realQuotes) {
       // 4. Check Exit Triggers: Market Close (15:15 IST), Target 2, Trailed Stop, Stop-Loss
       const isStoppedOut = isUpwardTrade ? pos.currentPrice <= pos.stopLoss : pos.currentPrice >= pos.stopLoss;
       const isTarget2Hit = isUpwardTrade ? pos.currentPrice >= pos.target2 : pos.currentPrice <= pos.target2;
-      const isIntradayMarketClose = pos.horizon === 'INTRADAY' && isMarketCloseSquareoffTime;
+      const isIntradayMarketClose = pos.horizon === 'INTRADAY' && (!session.isOpen || isMarketCloseSquareoffTime);
       const openDurationSec = (Date.now() - new Date(pos.openedAt).getTime()) / 1000;
       const isIntradayHoldingExpired = pos.horizon === 'INTRADAY' && (openDurationSec > 7200 || pos.ticksObserved > 120);
 
-      let closeReason = null;
-      if (isIntradayMarketClose) {
-        closeReason = 'MARKET_CLOSE_SQUAREOFF';
-      } else if (isTarget2Hit) {
-        closeReason = 'TARGET_2_ACHIEVED';
-      } else if (isStoppedOut) {
-        closeReason = pos.breakevenActivated ? 'CLOSED_WITH_LOCKED_PROFIT' : 'STOP_LOSS_EXIT';
-      } else if (isIntradayHoldingExpired && pos.unrealizedPL >= 0) {
-        closeReason = 'INTRADAY_PROFIT_SQUAREOFF';
+      if (!closeReason) {
+        if (isIntradayMarketClose) {
+          closeReason = 'MARKET_CLOSE_SQUAREOFF';
+        } else if (isTarget2Hit) {
+          closeReason = 'TARGET_2_ACHIEVED';
+        } else if (isStoppedOut) {
+          closeReason = pos.breakevenActivated ? 'CLOSED_WITH_LOCKED_PROFIT' : 'STOP_LOSS_EXIT';
+        } else if (isIntradayHoldingExpired && pos.unrealizedPL >= 0) {
+          closeReason = 'INTRADAY_PROFIT_SQUAREOFF';
+        }
       }
 
       if (closeReason) {
@@ -723,15 +713,8 @@ async function monitorAndManagePositions(realQuotes) {
         state.activePositions.splice(i, 1);
         state.tradeHistory.unshift(closedTrade);
 
-        if (isMongoConnected()) {
-          try {
-            const Trade = require('../models/Trade');
-            await Trade.findOneAndUpdate({ id: closedTrade.id }, closedTrade, { upsert: true });
-          } catch (e) {
-            console.warn('MongoDB Trade update warning:', e.message);
-          }
-        }
-
+        await saveTrade(closedTrade, 'IN');
+        await saveActivePositions(state.activePositions, 'IN');
         await persistState();
         await recordTradeOutcome(closedTrade);
 

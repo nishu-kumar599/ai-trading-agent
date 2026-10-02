@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { MarketProvider } from './context/MarketContext';
 import { Login } from './components/Login';
 import { Signup } from './components/Signup';
 import { ForgotPassword } from './components/ForgotPassword';
@@ -57,10 +58,12 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <div className="grid-overlay"></div>
-      <ErrorBoundary>
-        <AppContent />
-      </ErrorBoundary>
+      <MarketProvider>
+        <div className="grid-overlay"></div>
+        <ErrorBoundary>
+          <AppContent />
+        </ErrorBoundary>
+      </MarketProvider>
     </AuthProvider>
   );
 }

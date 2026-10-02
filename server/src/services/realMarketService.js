@@ -274,8 +274,32 @@ async function syncRealMarketData(force = false) {
 }
 
 /**
+ * Official Indian Stock Market (NSE/BSE) Trading Holidays Calendar (2026)
+ */
+const NSE_HOLIDAYS_2026 = [
+  { date: '2026-01-26', name: 'Republic Day' },
+  { date: '2026-02-15', name: 'Mahashivratri' },
+  { date: '2026-03-03', name: 'Holi' },
+  { date: '2026-03-20', name: 'Id-Ul-Fitr (Ramzan Id)' },
+  { date: '2026-04-03', name: 'Good Friday' },
+  { date: '2026-04-14', name: 'Dr. Baba Saheb Ambedkar Jayanti' },
+  { date: '2026-05-01', name: 'Maharashtra Day' },
+  { date: '2026-05-27', name: 'Bakri Id / Eid ul-Adha' },
+  { date: '2026-06-26', name: 'Muharram' },
+  { date: '2026-08-15', name: 'Independence Day' },
+  { date: '2026-08-26', name: 'Milad-un-Nabi' },
+  { date: '2026-10-02', name: 'Mahatma Gandhi Jayanti' },
+  { date: '2026-10-20', name: 'Dussehra' },
+  { date: '2026-11-08', name: 'Diwali Laxmi Pujan' },
+  { date: '2026-11-10', name: 'Diwali Balipratipada' },
+  { date: '2026-11-24', name: 'Gurunanak Jayanti' },
+  { date: '2026-12-25', name: 'Christmas' }
+];
+
+/**
  * Indian Stock Market (NSE/BSE) Trading Session Calculator
  * Regular Trading Hours: 09:15 AM to 03:30 PM (15:30) IST, Monday to Friday.
+ * Closed on Saturdays, Sundays, and Official NSE Holidays.
  */
 function getMarketSessionInfo() {
   const d = new Date();
@@ -287,19 +311,31 @@ function getMarketSessionInfo() {
   const minutes = ist.getMinutes();
   const totalMinutes = (hours * 60) + minutes;
 
+  const yyyy = ist.getFullYear();
+  const mm = String(ist.getMonth() + 1).padStart(2, '0');
+  const dd = String(ist.getDate()).padStart(2, '0');
+  const dateStr = `${yyyy}-${mm}-${dd}`;
+
+  // Check if today is an official NSE market holiday
+  const holiday = NSE_HOLIDAYS_2026.find(h => h.date === dateStr);
   const isWeekday = day >= 1 && day <= 5;
+
   // NSE/BSE regular trading hours: 09:15 AM (555 min) to 03:30 PM (930 min)
-  const isOpen = isWeekday && (totalMinutes >= 555 && totalMinutes < 930);
+  const isOpen = isWeekday && !holiday && (totalMinutes >= 555 && totalMinutes < 930);
 
   let status = 'CLOSED';
   let nextSessionMessage = '';
 
-  if (isOpen) {
-    status = 'LIVE_OPEN';
-    nextSessionMessage = 'Live market session in progress (Closes at 03:30 PM IST)';
+  if (holiday) {
+    status = 'HOLIDAY_CLOSED';
+    const isFriday = day === 5;
+    nextSessionMessage = `Market Closed (${holiday.name}). Next trading session opens ${isFriday ? 'Monday' : 'tomorrow'} at 09:15 AM IST`;
   } else if (!isWeekday) {
     status = 'WEEKEND_CLOSED';
     nextSessionMessage = 'Market Closed (Weekend). Next trading session opens Monday at 09:15 AM IST';
+  } else if (isOpen) {
+    status = 'LIVE_OPEN';
+    nextSessionMessage = 'Live market session in progress (Closes at 03:30 PM IST)';
   } else if (totalMinutes < 555) {
     status = 'PRE_MARKET_STANDBY';
     nextSessionMessage = 'Pre-market standby. Regular trading session opens today at 09:15 AM IST';
@@ -314,6 +350,7 @@ function getMarketSessionInfo() {
   return {
     isOpen,
     status,
+    holidayName: holiday ? holiday.name : null,
     tradingHours: '09:15 AM - 03:30 PM IST (Mon - Fri)',
     nextSessionMessage,
     istTimeString: ist.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
@@ -507,6 +544,7 @@ async function getRealMarketUniverse(horizon = 'INTRADAY') {
 }
 
 module.exports = {
+  NSE_HOLIDAYS_2026,
   getMarketSessionInfo,
   syncRealMarketData,
   getRealQuotes,

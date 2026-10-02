@@ -1,0 +1,32 @@
+[
+  {
+    "id": "us_pos_1790944180536_vieq75",
+    "market": "US",
+    "currency": "$",
+    "symbol": "NVDA",
+    "horizon": "INTRADAY",
+    "direction": "BUY",
+    "entryPrice": 121.4,
+    "currentPrice": 121.4,
+    "stopLoss": 120.43,
+    "target1": 123.22,
+    "target2": 125.04,
+    "quantity": 20,
+    "breakevenActivated": false,
+    "trailingPct": 0.008,
+    "unrealizedPL": 0,
+    "unrealizedPLPct": 0,
+    "status": "MANUALLY_CLOSED",
+    "isAMO": true,
+    "underlyingSpotAtEntry": 121.4,
+    "openedAt": "2026-10-02T12:29:40.536Z",
+    "exitPrice": 121.4,
+    "grossPL": 0,
+    "brokerageCharges": 1,
+    "netRealizedPL": -1,
+    "realizedPL": -1,
+    "realizedPLPct": -0.04,
+    "outcome": "LOSS",
+    "closedAt": "2026-10-02T12:29:40.537Z"
+  }
+]
