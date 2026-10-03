@@ -22,12 +22,14 @@ import {
   Calendar,
   Building2
 } from 'lucide-react';
+import { useMarket } from '../context/MarketContext';
 
 export const IPOSection = ({ onExecutePaperTrade }) => {
+  const { marketRegion, currency, formatCurrency } = useMarket();
   const [ipos, setIpos] = useState([]);
   const [stats, setStats] = useState(null);
   const [statusFilter, setStatusFilter] = useState('OPEN'); // OPEN, UPCOMING, LISTED, MY_BIDS
-  const [categoryFilter, setCategoryFilter] = useState('ALL'); // ALL, MAINBOARD, SME
+  const [categoryFilter, setCategoryFilter] = useState('ALL'); // ALL, MAINBOARD, SME or NASDAQ, NYSE
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [myBids, setMyBids] = useState([]);
@@ -36,19 +38,19 @@ export const IPOSection = ({ onExecutePaperTrade }) => {
   const [selectedIpoForBid, setSelectedIpoForBid] = useState(null);
   const [selectedIpoForAnalysis, setSelectedIpoForAnalysis] = useState(null);
   const [bidLots, setBidLots] = useState(1);
-  const [upiId, setUpiId] = useState('trader@okhdfcbank');
+  const [upiId, setUpiId] = useState(marketRegion === 'US' ? 'US-IBKR-94021' : 'trader@okhdfcbank');
   const [bidSubmitting, setBidSubmitting] = useState(false);
   const [actionMessage, setActionMessage] = useState(null);
 
   useEffect(() => {
     fetchIpos();
     fetchMyBids();
-  }, [statusFilter, categoryFilter]);
+  }, [statusFilter, categoryFilter, marketRegion]);
 
   const fetchIpos = async () => {
     try {
       setLoading(true);
-      const url = `/api/ipo/list?status=${statusFilter === 'MY_BIDS' ? 'ALL' : statusFilter}&category=${categoryFilter}`;
+      const url = `/api/ipo/list?status=${statusFilter === 'MY_BIDS' ? 'ALL' : statusFilter}&category=${categoryFilter}&market=${marketRegion}`;
       const res = await fetch(url);
       const text = await res.text();
       const data = text ? JSON.parse(text) : null;
@@ -65,7 +67,7 @@ export const IPOSection = ({ onExecutePaperTrade }) => {
 
   const fetchMyBids = async () => {
     try {
-      const res = await fetch('/api/ipo/my-bids');
+      const res = await fetch(`/api/ipo/my-bids?market=${marketRegion}`);
       const text = await res.text();
       const data = text ? JSON.parse(text) : null;
       if (data && data.success) {
@@ -188,17 +190,19 @@ export const IPOSection = ({ onExecutePaperTrade }) => {
               gap: '6px'
             }}>
               <span className="pulse-dot" style={{ background: '#10b981' }}></span>
-              LIVE EXCHANGE FEED (NSE & BSE)
+              {marketRegion === 'US' ? 'LIVE WALL STREET FEED (NYSE & NASDAQ)' : 'LIVE EXCHANGE FEED (NSE & BSE)'}
             </span>
             <span style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>
-              Mainboard & SME • Real GMP & Dates
+              {marketRegion === 'US' ? 'Tech, Unicorns & Direct Listings • Real GMP & Dates' : 'Mainboard & SME • Real GMP & Dates'}
             </span>
           </div>
           <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.3px', margin: '4px 0' }}>
-            Indian Stock Market IPO Radar & Paper Bidding
+            {marketRegion === 'US' ? 'US Wall Street IPO Radar & Paper Offerings' : 'Indian Stock Market IPO Radar & Paper Bidding'}
           </h2>
           <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', margin: 0, maxWidth: '680px' }}>
-            Track real-time Grey Market Premium (GMP), institutional subscription multiples, AI valuation scores, and simulate applying with paper funds before putting real capital at risk.
+            {marketRegion === 'US'
+              ? 'Track real-time Grey Market Premia (GMP), institutional order-book demand, AI valuation metrics, and simulate pre-market bids with paper funds before listing.'
+              : 'Track real-time Grey Market Premium (GMP), institutional subscription multiples, AI valuation scores, and simulate applying with paper funds before putting real capital at risk.'}
           </p>
         </div>
 
@@ -333,7 +337,7 @@ export const IPOSection = ({ onExecutePaperTrade }) => {
           {/* Mainboard vs SME */}
           {statusFilter !== 'MY_BIDS' && (
             <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255, 255, 255, 0.04)', borderRadius: '8px', padding: '2px' }}>
-              {['ALL', 'MAINBOARD', 'SME'].map(cat => (
+              {(marketRegion === 'US' ? ['ALL', 'NASDAQ', 'NYSE'] : ['ALL', 'MAINBOARD', 'SME']).map(cat => (
                 <button
                   key={cat}
                   onClick={() => setCategoryFilter(cat)}
@@ -418,10 +422,10 @@ export const IPOSection = ({ onExecutePaperTrade }) => {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Layers size={18} color="var(--accent-emerald)" />
-              My Virtual IPO Applications & UPI Mandates
+              {marketRegion === 'US' ? 'My Virtual US IPO Allocations & Syndicate Bids' : 'My Virtual IPO Applications & UPI Mandates'}
             </h3>
             <span style={{ fontSize: '0.76rem', color: 'var(--text-dim)' }}>
-              Simulates SEBI UPI ASBA blocking with zero real capital risk
+              {marketRegion === 'US' ? 'Simulates SEC / Broker IPO syndicate allocation with zero capital risk' : 'Simulates SEBI UPI ASBA blocking with zero real capital risk'}
             </span>
           </div>
 
@@ -463,7 +467,7 @@ export const IPOSection = ({ onExecutePaperTrade }) => {
                       <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginLeft: '6px' }}>({bid.shares} sh)</span>
                     </td>
                     <td style={{ padding: '14px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#fff' }}>
-                      ₹{bid.totalBlocked.toLocaleString()}
+                      {bid.currency || currency}{bid.totalBlocked.toLocaleString(marketRegion === 'US' ? 'en-US' : 'en-IN')}
                     </td>
                     <td style={{ padding: '14px', fontSize: '0.76rem', color: 'var(--text-muted)' }}>
                       {bid.allotmentOdds}
@@ -488,7 +492,7 @@ export const IPOSection = ({ onExecutePaperTrade }) => {
                     <td style={{ padding: '14px', fontFamily: 'var(--font-mono)', fontWeight: 800 }}>
                       {bid.pnlRealized ? (
                         <span style={{ color: bid.realizedPL > 0 ? 'var(--accent-emerald)' : 'var(--text-muted)' }}>
-                          {bid.realizedPL > 0 ? `+₹${bid.realizedPL.toLocaleString()}` : '₹0 (Refunded)'}
+                          {bid.realizedPL > 0 ? `+${bid.currency || currency}${bid.realizedPL.toLocaleString(marketRegion === 'US' ? 'en-US' : 'en-IN')}` : `${bid.currency || currency}0 (Refunded)`}
                         </span>
                       ) : (
                         <span style={{ color: 'var(--text-dim)' }}>Awaiting Listing</span>
@@ -635,21 +639,21 @@ export const IPOSection = ({ onExecutePaperTrade }) => {
                     <div>
                       <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>Price Band</div>
                       <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#fff', marginTop: '2px', fontFamily: 'var(--font-mono)' }}>
-                        {isListed ? `₹${ipo.issuePrice}` : `₹${ipo.priceRange?.min} - ₹${ipo.priceRange?.max}`}
+                        {isListed ? `${currency}${ipo.issuePrice}` : `${currency}${ipo.priceRange?.min} - ${currency}${ipo.priceRange?.max}`}
                       </div>
                     </div>
 
                     <div>
                       <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>Lot Size / Min</div>
                       <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#fff', marginTop: '2px' }}>
-                        {ipo.lotSize} sh (₹{ipo.minInvestment?.toLocaleString()})
+                        {ipo.lotSize} sh ({currency}{ipo.minInvestment?.toLocaleString(marketRegion === 'US' ? 'en-US' : 'en-IN')})
                       </div>
                     </div>
 
                     <div>
                       <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>Issue Size</div>
                       <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#fff', marginTop: '2px' }}>
-                        ₹{ipo.issueSize?.toLocaleString()} Cr
+                        {currency}{ipo.issueSize?.toLocaleString(marketRegion === 'US' ? 'en-US' : 'en-IN')} {marketRegion === 'US' ? 'M' : 'Cr'}
                       </div>
                     </div>
                   </div>
@@ -669,13 +673,13 @@ export const IPOSection = ({ onExecutePaperTrade }) => {
                       <div>
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>Day 1 Listing Gain</div>
                         <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--accent-emerald)' }}>
-                          +{ipo.listingGainPct}% (Listed at ₹{ipo.listingPrice})
+                          +{ipo.listingGainPct}% (Listed at {currency}{ipo.listingPrice})
                         </div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>Current Price / ROI</div>
                         <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fff', fontFamily: 'var(--font-mono)' }}>
-                          ₹{ipo.currentPrice} (+{ipo.totalGainPct}%)
+                          {currency}{ipo.currentPrice} (+{ipo.totalGainPct}%)
                         </div>
                       </div>
                     </div>
@@ -696,13 +700,13 @@ export const IPOSection = ({ onExecutePaperTrade }) => {
                           <span>Estimated GMP Trend: {ipo.gmp?.trend}</span>
                         </div>
                         <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#38bdf8', marginTop: '2px' }}>
-                          +₹{ipo.gmp?.value} (+{ipo.gmp?.percentage}%)
+                          +{currency}{ipo.gmp?.value} (+{ipo.gmp?.percentage}%)
                         </div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>Exp Listing Price</div>
                         <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fff', fontFamily: 'var(--font-mono)' }}>
-                          ₹{ipo.gmp?.expectedListingPrice}
+                          {currency}{ipo.gmp?.expectedListingPrice}
                         </div>
                       </div>
                     </div>
@@ -870,7 +874,7 @@ export const IPOSection = ({ onExecutePaperTrade }) => {
                   Apply for {selectedIpoForBid.name}
                 </h3>
                 <span style={{ fontSize: '0.74rem', color: 'var(--accent-emerald)' }}>
-                  Virtual UPI ASBA Application Simulator
+                  {marketRegion === 'US' ? 'Simulated US Broker Syndicate Pre-Market Bid' : 'Virtual UPI ASBA Application Simulator'}
                 </span>
               </div>
             </div>
@@ -879,7 +883,7 @@ export const IPOSection = ({ onExecutePaperTrade }) => {
               {/* Lots Stepper */}
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ fontSize: '0.76rem', color: 'var(--text-dim)', display: 'block', marginBottom: '6px' }}>
-                  Select Lots (1 Lot = {selectedIpoForBid.lotSize} Shares @ ₹{selectedIpoForBid.priceRange?.max})
+                  Select Lots (1 Lot = {selectedIpoForBid.lotSize} Shares @ {currency}{selectedIpoForBid.priceRange?.max})
                 </label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <button
@@ -937,16 +941,16 @@ export const IPOSection = ({ onExecutePaperTrade }) => {
                 </div>
               </div>
 
-              {/* UPI ID Simulator */}
+              {/* Payment Account Simulator */}
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ fontSize: '0.76rem', color: 'var(--text-dim)', display: 'block', marginBottom: '6px' }}>
-                  Simulated UPI ID Handle
+                  {marketRegion === 'US' ? 'Simulated Broker Account Handle / Routing' : 'Simulated UPI ID Handle'}
                 </label>
                 <input
                   type="text"
                   value={upiId}
                   onChange={(e) => setUpiId(e.target.value)}
-                  placeholder="yourname@okhdfcbank"
+                  placeholder={marketRegion === 'US' ? 'US-TRADER-IBKR-9941' : 'yourname@okhdfcbank'}
                   style={{
                     width: '100%',
                     background: 'var(--bg-input)',
@@ -973,7 +977,7 @@ export const IPOSection = ({ onExecutePaperTrade }) => {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
                   <span>Cut-off Bid Price:</span>
-                  <strong style={{ color: '#fff' }}>₹{selectedIpoForBid.priceRange?.max}</strong>
+                  <strong style={{ color: '#fff' }}>{currency}{selectedIpoForBid.priceRange?.max}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
                   <span>Exp Allotment Odds:</span>
@@ -986,7 +990,7 @@ export const IPOSection = ({ onExecutePaperTrade }) => {
                 <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '8px', marginTop: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#fff' }}>Total Virtual Capital Blocked:</span>
                   <span style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--accent-emerald)', fontFamily: 'var(--font-mono)' }}>
-                    ₹{(bidLots * selectedIpoForBid.lotSize * selectedIpoForBid.priceRange?.max).toLocaleString()}
+                    {currency}{(bidLots * selectedIpoForBid.lotSize * selectedIpoForBid.priceRange?.max).toLocaleString(marketRegion === 'US' ? 'en-US' : 'en-IN')}
                   </span>
                 </div>
               </div>
@@ -1017,7 +1021,7 @@ export const IPOSection = ({ onExecutePaperTrade }) => {
                 }}
               >
                 {bidSubmitting ? <RefreshCw size={16} className="spinner" /> : <Rocket size={16} />}
-                <span>Submit Virtual UPI Mandate</span>
+                <span>{marketRegion === 'US' ? 'Submit Pre-IPO Syndicate Bid' : 'Submit Virtual UPI Mandate'}</span>
               </button>
             </form>
           </div>

@@ -76,7 +76,7 @@ export const MarketTickerTape = ({ onSelectTicker }) => {
     // High-frequency 2.5-second live quotes polling for real-time price flickers (Groww style)
     const pollInterval = setInterval(fetchLiveQuotes, 2500);
     return () => clearInterval(pollInterval);
-  }, []);
+  }, [marketRegion]);
 
   // Double items for seamless infinite scroll
   const marqueeItems = [...ticks, ...ticks];

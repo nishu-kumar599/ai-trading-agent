@@ -10,13 +10,15 @@ import {
   Sparkles,
   X
 } from 'lucide-react';
+import { useMarket } from '../context/MarketContext';
 
 export const RiskCalculatorModal = ({ isOpen, onClose }) => {
-  const [capital, setCapital] = useState(100000);
+  const { marketRegion, currency } = useMarket();
+  const [capital, setCapital] = useState(marketRegion === 'US' ? 25000 : 100000);
   const [riskPct, setRiskPct] = useState(1.0); // 1% risk per trade
-  const [entryPrice, setEntryPrice] = useState(2980.0);
-  const [stopLoss, setStopLoss] = useState(2950.0);
-  const [targetPrice, setTargetPrice] = useState(3050.0);
+  const [entryPrice, setEntryPrice] = useState(marketRegion === 'US' ? 120.0 : 2980.0);
+  const [stopLoss, setStopLoss] = useState(marketRegion === 'US' ? 117.0 : 2950.0);
+  const [targetPrice, setTargetPrice] = useState(marketRegion === 'US' ? 126.0 : 3050.0);
 
   if (!isOpen) return null;
 
@@ -96,7 +98,7 @@ export const RiskCalculatorModal = ({ isOpen, onClose }) => {
         {/* Input Fields Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '20px' }}>
           <div>
-            <label className="form-label">Total Account Capital (₹)</label>
+            <label className="form-label">Total Account Capital ({currency})</label>
             <input
               type="number"
               className="input-field"
@@ -119,7 +121,7 @@ export const RiskCalculatorModal = ({ isOpen, onClose }) => {
           </div>
 
           <div>
-            <label className="form-label">Entry Price (₹)</label>
+            <label className="form-label">Entry Price ({currency})</label>
             <input
               type="number"
               className="input-field"
@@ -130,7 +132,7 @@ export const RiskCalculatorModal = ({ isOpen, onClose }) => {
           </div>
 
           <div>
-            <label className="form-label">Stop-Loss Price (₹)</label>
+            <label className="form-label">Stop-Loss Price ({currency})</label>
             <input
               type="number"
               className="input-field"
@@ -141,7 +143,7 @@ export const RiskCalculatorModal = ({ isOpen, onClose }) => {
           </div>
 
           <div style={{ gridColumn: '1 / -1' }}>
-            <label className="form-label">Target Price (₹)</label>
+            <label className="form-label">Target Price ({currency})</label>
             <input
               type="number"
               className="input-field"
@@ -173,7 +175,7 @@ export const RiskCalculatorModal = ({ isOpen, onClose }) => {
           <div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Capital Required</div>
             <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff', fontFamily: 'var(--font-mono)' }}>
-              ₹{requiredInvestment.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+              {currency}{requiredInvestment.toLocaleString(marketRegion === 'US' ? 'en-US' : 'en-IN', { maximumFractionDigits: 0 })}
             </div>
           </div>
 
@@ -187,7 +189,7 @@ export const RiskCalculatorModal = ({ isOpen, onClose }) => {
           <div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Projected Gain</div>
             <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--accent-emerald)', fontFamily: 'var(--font-mono)' }}>
-              +₹{totalProjectedProfit.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+              +{currency}{totalProjectedProfit.toLocaleString(marketRegion === 'US' ? 'en-US' : 'en-IN', { maximumFractionDigits: 0 })}
             </div>
           </div>
         </div>
@@ -206,7 +208,7 @@ export const RiskCalculatorModal = ({ isOpen, onClose }) => {
         }}>
           <ShieldCheck size={18} color="var(--accent-emerald)" style={{ flexShrink: 0 }} />
           <div>
-            <strong>Profit-Lock Trigger:</strong> Once price touches <strong>₹{breakevenTriggerPrice}</strong> (+1.0%), Stop-Loss automatically shifts to Breakeven (₹{entry}), eliminating risk of loss!
+            <strong>Profit-Lock Trigger:</strong> Once price touches <strong>{currency}{breakevenTriggerPrice}</strong> (+1.0%), Stop-Loss automatically shifts to Breakeven ({currency}{entry}), eliminating risk of loss!
           </div>
         </div>
 

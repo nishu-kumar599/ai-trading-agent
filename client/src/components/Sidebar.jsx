@@ -60,7 +60,7 @@ export const Sidebar = ({
         { id: 'short_term', label: 'Short-Term Swing', icon: TrendingUp, badge: '1-5d Breakout' },
         { id: 'medium_term', label: 'Medium-Term Positional', icon: Compass, badge: '2-12w Trend' },
         { id: 'long_term', label: 'Long-Term Wealth', icon: Calendar, badge: 'Value DCA' },
-        { id: 'f_and_o', label: 'Futures & Options', icon: Layers, badge: 'Calls & Puts' }
+        ...(marketRegion !== 'US' ? [{ id: 'f_and_o', label: 'Futures & Options', icon: Layers, badge: 'Calls & Puts' }] : [])
       ]
     },
     {

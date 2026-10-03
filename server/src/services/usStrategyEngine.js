@@ -74,17 +74,6 @@ const US_STRATEGY_CATALOG = {
       short: 'Rebalance if price extends > 40% above 200 SMA.',
       riskManagement: 'Systematic Dollar Cost Averaging | Multi-year horizon'
     }
-  },
-  F_AND_O: {
-    name: 'US Options High-Delta Precision',
-    timeframe: 'Intraday to Weekly Expiry',
-    indicators: ['Option Greeks (Delta, Theta, IV)', 'ATM Strikes', 'Put-Call Ratio'],
-    description: 'Exploits volatility on SPY, QQQ, NVDA, TSLA, AAPL with asymmetric risk.',
-    rules: {
-      long: 'Bullish Breakout -> Buy ATM Call (Delta ~0.52).',
-      short: 'Bearish Breakdown -> Buy ATM Put (Delta ~ -0.48).',
-      riskManagement: 'Option Premium Stop-Loss: 25% | Target 1: +45% (Scale 50%) | Target 2: +100%'
-    }
   }
 };
 

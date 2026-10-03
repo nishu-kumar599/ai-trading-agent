@@ -72,7 +72,9 @@ router.get('/catalog', (req, res) => {
 router.get('/scan', async (req, res) => {
   const market = (req.query.market || 'IN').toUpperCase();
   const horizon = (req.query.horizon || 'INTRADAY').toUpperCase();
-  const validHorizons = ['INTRADAY', 'SHORT_TERM', 'MEDIUM_TERM', 'LONG_TERM', 'F_AND_O'];
+  const validHorizons = market === 'US'
+    ? ['INTRADAY', 'SHORT_TERM', 'MEDIUM_TERM', 'LONG_TERM']
+    : ['INTRADAY', 'SHORT_TERM', 'MEDIUM_TERM', 'LONG_TERM', 'F_AND_O'];
   const selectedHorizon = validHorizons.includes(horizon) ? horizon : 'INTRADAY';
 
   if (market === 'US') {

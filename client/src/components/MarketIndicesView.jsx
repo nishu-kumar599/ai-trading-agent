@@ -159,7 +159,14 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
     sentiment: 'BEARISH'
   });
 
-  const sectorPerformance = [
+  const sectorPerformance = marketRegion === 'US' ? [
+    { name: 'Tech (XLK)', pct: '+1.45%', isUp: true },
+    { name: 'Semis (SOXX)', pct: '+2.10%', isUp: true },
+    { name: 'Financials (XLF)', pct: '+0.35%', isUp: true },
+    { name: 'Healthcare (XLV)', pct: '-0.24%', isUp: false },
+    { name: 'Consumer (XLY)', pct: '+0.88%', isUp: true },
+    { name: 'Energy (XLE)', pct: '-1.15%', isUp: false }
+  ] : [
     { name: 'Nifty IT', pct: '-1.25%', isUp: false },
     { name: 'Nifty Auto', pct: '+0.42%', isUp: true },
     { name: 'Nifty Bank', pct: '-3.07%', isUp: false },
@@ -502,10 +509,10 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
           <div>
             <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fff' }}>
-              NSE Equities Real-Time Scanner
+              {marketRegion === 'US' ? 'Wall Street Equities Real-Time Scanner' : 'NSE Equities Real-Time Scanner'}
             </h3>
             <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-              Live prices from Yahoo Finance exchange feeds with calculated RSI(14), VWAP, and segment trade signals.
+              Live prices from {marketRegion === 'US' ? 'NYSE & NASDAQ' : 'NSE & BSE'} exchange feeds with calculated RSI(14), VWAP, and segment trade signals.
             </p>
           </div>
 
@@ -544,7 +551,7 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
                 <th style={{ padding: '12px 14px' }}>RSI (14)</th>
                 <th style={{ padding: '12px 14px' }}>Trend</th>
                 <th style={{ padding: '12px 14px' }}>Intraday Signal</th>
-                <th style={{ padding: '12px 14px' }}>F&O Option Action</th>
+                {marketRegion !== 'US' && <th style={{ padding: '12px 14px' }}>F&O Option Action</th>}
                 <th style={{ padding: '12px 14px', textAlign: 'right' }}>Quick Action</th>
               </tr>
             </thead>
@@ -632,14 +639,16 @@ export const MarketIndicesView = ({ onExecuteQuickTrade }) => {
                       </span>
                     </td>
 
-                    <td style={{ padding: '12px 14px', fontSize: '0.76rem' }}>
-                      <div style={{ color: stock.foAction === 'BUY_CALL' ? 'var(--accent-emerald)' : (stock.foAction === 'BUY_PUT' ? 'var(--danger)' : '#94a3b8'), fontWeight: 700 }}>
-                        {stock.foAction}
-                      </div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>
-                        {stock.recommendedStrike}
-                      </div>
-                    </td>
+                    {marketRegion !== 'US' && (
+                      <td style={{ padding: '12px 14px', fontSize: '0.76rem' }}>
+                        <div style={{ color: stock.foAction === 'BUY_CALL' ? 'var(--accent-emerald)' : (stock.foAction === 'BUY_PUT' ? 'var(--danger)' : '#94a3b8'), fontWeight: 700 }}>
+                          {stock.foAction}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>
+                          {stock.recommendedStrike}
+                        </div>
+                      </td>
+                    )}
 
                     <td style={{ padding: '12px 14px', textAlign: 'right' }}>
                       <button

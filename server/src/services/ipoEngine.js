@@ -28,6 +28,30 @@ let userPaperBids = [
   }
 ];
 
+let userUSPaperBids = [
+  {
+    id: 'US_BID_201',
+    ipoId: 'US_IPO_RDDT',
+    companyName: 'Reddit Inc.',
+    symbol: 'RDDT',
+    appliedDate: '2026-09-20',
+    category: 'RETAIL',
+    lots: 2,
+    shares: 20,
+    bidPrice: 34.00,
+    totalBlocked: 680.00,
+    upiId: 'US-IBKR-94021',
+    allotmentStatus: 'ALLOTTED',
+    listingStatus: 'LISTED',
+    allottedShares: 20,
+    listingPrice: 47.00,
+    listingGainPct: 38.24,
+    realizedPL: 260.00,
+    pnlRealized: true,
+    allotmentOdds: '1 in 2 (50.0%)'
+  }
+];
+
 const IPO_DATASET = [
   // ================= OPEN / ACTIVE IPOS =================
   {
@@ -654,20 +678,493 @@ const IPO_DATASET = [
   }
 ];
 
+const US_IPO_DATASET = [
+  // ================= OPEN / ACTIVE US IPOS =================
+  {
+    id: 'US_IPO_STRIPE',
+    name: 'Stripe Inc.',
+    symbol: 'STRIPE',
+    category: 'NASDAQ',
+    market: 'US',
+    currency: '$',
+    status: 'OPEN',
+    badge: 'HIGH DEMAND',
+    sector: 'Financial Infrastructure & Payments',
+    exchange: 'NASDAQ',
+    openDate: '2026-10-01',
+    closeDate: '2026-10-05',
+    allotmentDate: '2026-10-06',
+    listingDate: '2026-10-08',
+    priceRange: { min: 32, max: 36 },
+    lotSize: 10,
+    minInvestment: 360,
+    issueSize: 3500, // $3.5B
+    freshIssue: 2500,
+    ofs: 1000,
+    gmp: {
+      value: 9.50,
+      percentage: 26.39,
+      expectedListingPrice: 45.50,
+      trend: 'EXPANDING',
+      updatedAt: '15 mins ago'
+    },
+    subscription: {
+      overall: 8.45,
+      qib: 14.20,
+      nii: 6.80,
+      retail: 4.35,
+      employee: 3.10
+    },
+    aiRating: {
+      verdict: 'STRONG BUY / TECH TITAN',
+      score: 95,
+      tag: 'Global Payments Kingpin',
+      summary: 'Powerhouse financial infrastructure processing over $1 Trillion in volume annually. Exceptional developer adoption and compounding enterprise revenue.',
+      strengths: [
+        'Processes transactions for over 75% of top internet businesses.',
+        'Sustained GAAP profitability and over $1.5B annual free cash flow.',
+        'High customer switching moat with proprietary billing & tax stack.'
+      ],
+      risks: [
+        'Interchange fee compression from regulatory scrutiny in EU/US.',
+        'Macroeconomic slowdown impacting consumer e-commerce volume.'
+      ],
+      financials: {
+        revenue3YCAGR: '29.4%',
+        ebitdaMargin: '34.2%',
+        patMargin: '18.6%',
+        peRatio: 42.0,
+        industryPE: 35.5,
+        debtToEquity: '0.15',
+        ronw: '24.8%'
+      },
+      peers: [
+        { name: 'Adyen N.V.', pe: 46.2, pb: 9.8 },
+        { name: 'PayPal Holdings', pe: 16.5, pb: 2.4 },
+        { name: 'Block Inc.', pe: 28.4, pb: 2.1 }
+      ]
+    }
+  },
+  {
+    id: 'US_IPO_KLARNA',
+    name: 'Klarna Group plc',
+    symbol: 'KLARNA',
+    category: 'NYSE',
+    market: 'US',
+    currency: '$',
+    status: 'OPEN',
+    badge: 'EXPANDING GMP',
+    sector: 'Consumer FinTech / Buy Now Pay Later',
+    exchange: 'NYSE',
+    openDate: '2026-10-02',
+    closeDate: '2026-10-06',
+    allotmentDate: '2026-10-07',
+    listingDate: '2026-10-09',
+    priceRange: { min: 38, max: 42 },
+    lotSize: 10,
+    minInvestment: 420,
+    issueSize: 1400, // $1.4B
+    freshIssue: 1000,
+    ofs: 400,
+    gmp: {
+      value: 7.20,
+      percentage: 17.14,
+      expectedListingPrice: 49.20,
+      trend: 'EXPANDING',
+      updatedAt: '30 mins ago'
+    },
+    subscription: {
+      overall: 5.60,
+      qib: 9.10,
+      nii: 4.20,
+      retail: 3.50,
+      employee: 2.40
+    },
+    aiRating: {
+      verdict: 'BUY / AI EFFICIENCY LEADER',
+      score: 87,
+      tag: 'Consumer BNPL Pioneer',
+      summary: 'Turned profitable by aggressively replacing back-office operations with generative AI agents. Over 85 million active global consumers.',
+      strengths: [
+        'Massive 85M+ consumer reach with premier global retail brand partnerships.',
+        'Sharp margin expansion powered by proprietary AI customer support.',
+        'Expanding banking services and Klarna Card credit footprint.'
+      ],
+      risks: [
+        'Credit risk during potential economic consumer slowdown.',
+        'Competitive pressure from Apple Pay and Affirm.'
+      ],
+      financials: {
+        revenue3YCAGR: '22.1%',
+        ebitdaMargin: '19.5%',
+        patMargin: '9.2%',
+        peRatio: 36.8,
+        industryPE: 30.0,
+        debtToEquity: '0.85',
+        ronw: '16.4%'
+      },
+      peers: [
+        { name: 'Affirm Holdings', pe: 38.5, pb: 4.2 },
+        { name: 'PayPal', pe: 16.5, pb: 2.4 }
+      ]
+    }
+  },
+  // ================= UPCOMING US IPOS =================
+  {
+    id: 'US_IPO_DATABRICKS',
+    name: 'Databricks Inc.',
+    symbol: 'DATA',
+    category: 'NASDAQ',
+    market: 'US',
+    currency: '$',
+    status: 'UPCOMING',
+    badge: 'MEGA TECH IPO',
+    sector: 'Enterprise Data & Generative AI',
+    exchange: 'NASDAQ',
+    openDate: '2026-10-14',
+    closeDate: '2026-10-18',
+    allotmentDate: '2026-10-19',
+    listingDate: '2026-10-22',
+    priceRange: { min: 75, max: 82 },
+    lotSize: 10,
+    minInvestment: 820,
+    issueSize: 4200, // $4.2B
+    freshIssue: 3500,
+    ofs: 700,
+    gmp: {
+      value: 24.50,
+      percentage: 29.88,
+      expectedListingPrice: 106.50,
+      trend: 'EXPANDING',
+      updatedAt: '1 hour ago'
+    },
+    subscription: {
+      overall: 0,
+      qib: 0,
+      nii: 0,
+      retail: 0,
+      employee: 0
+    },
+    aiRating: {
+      verdict: 'GRADE A+ MUST SUBSCRIBE',
+      score: 96,
+      tag: 'Generative AI Foundation',
+      summary: 'Fastest software company to hit $2.6B ARR. The premier Lakehouse architecture for Fortune 500 AI model development and data governance.',
+      strengths: [
+        'Over 10,000 global enterprise customers including 60% of Fortune 500.',
+        'Exceptional net revenue retention exceeding 140%.',
+        'Acquisitions of MosaicML and Lilac cemented dominance in generative AI.'
+      ],
+      risks: [
+        'Intense rivalry with Snowflake and BigQuery hyperscalers.',
+        'High compute server costs from GPU cloud providers.'
+      ],
+      financials: {
+        revenue3YCAGR: '48.5%',
+        ebitdaMargin: '26.8%',
+        patMargin: '14.0%',
+        peRatio: 58.0,
+        industryPE: 45.0,
+        debtToEquity: '0.05',
+        ronw: '28.1%'
+      },
+      peers: [
+        { name: 'Snowflake Inc.', pe: 64.0, pb: 11.2 },
+        { name: 'Palantir Tech', pe: 72.5, pb: 18.4 }
+      ]
+    }
+  },
+  {
+    id: 'US_IPO_COREWEAVE',
+    name: 'CoreWeave Inc.',
+    symbol: 'CRWV',
+    category: 'NASDAQ',
+    market: 'US',
+    currency: '$',
+    status: 'UPCOMING',
+    badge: 'NVIDIA BACKED',
+    sector: 'AI Cloud & GPU Hyperscaler',
+    exchange: 'NASDAQ',
+    openDate: '2026-10-18',
+    closeDate: '2026-10-22',
+    allotmentDate: '2026-10-23',
+    listingDate: '2026-10-26',
+    priceRange: { min: 45, max: 50 },
+    lotSize: 15,
+    minInvestment: 750,
+    issueSize: 2800, // $2.8B
+    freshIssue: 2500,
+    ofs: 300,
+    gmp: {
+      value: 17.50,
+      percentage: 35.00,
+      expectedListingPrice: 67.50,
+      trend: 'EXPANDING',
+      updatedAt: '2 hours ago'
+    },
+    subscription: {
+      overall: 0,
+      qib: 0,
+      nii: 0,
+      retail: 0,
+      employee: 0
+    },
+    aiRating: {
+      verdict: 'STRONG BUY / AI INFRASTRUCTURE',
+      score: 92,
+      tag: 'GPU Cloud Hyperscaler',
+      summary: 'Tier 1 Nvidia cloud partner with multi-billion dollar contracted backlog from Microsoft, Inflection, and frontier AI research labs.',
+      strengths: [
+        'Privileged early access allocation to Nvidia Blackwell & Hopper GPU clusters.',
+        'Over $10 Billion multi-year enterprise contracted backlog.',
+        'Specialized optical interconnect cloud network outperforming generic cloud.'
+      ],
+      risks: [
+        'High debt load for GPU datacenter asset financing.',
+        'Customer concentration in AI frontier foundation model labs.'
+      ],
+      financials: {
+        revenue3YCAGR: '145.0%',
+        ebitdaMargin: '42.0%',
+        patMargin: '21.5%',
+        peRatio: 48.0,
+        industryPE: 38.0,
+        debtToEquity: '1.80',
+        ronw: '32.5%'
+      },
+      peers: [
+        { name: 'Nebius Group', pe: 45.0, pb: 4.8 },
+        { name: 'Super Micro Computer', pe: 22.0, pb: 3.8 }
+      ]
+    }
+  },
+  {
+    id: 'US_IPO_SHEIN',
+    name: 'Shein Group Ltd',
+    symbol: 'SHEIN',
+    category: 'NYSE',
+    market: 'US',
+    currency: '$',
+    status: 'UPCOMING',
+    badge: 'RETAIL SENSATION',
+    sector: 'On-Demand Fashion & Global E-Commerce',
+    exchange: 'NYSE',
+    openDate: '2026-10-25',
+    closeDate: '2026-10-29',
+    allotmentDate: '2026-10-30',
+    listingDate: '2026-11-03',
+    priceRange: { min: 22, max: 25 },
+    lotSize: 25,
+    minInvestment: 625,
+    issueSize: 5000, // $5.0B
+    freshIssue: 3500,
+    ofs: 1500,
+    gmp: {
+      value: 3.50,
+      percentage: 14.00,
+      expectedListingPrice: 28.50,
+      trend: 'STABLE',
+      updatedAt: '3 hours ago'
+    },
+    subscription: {
+      overall: 0,
+      qib: 0,
+      nii: 0,
+      retail: 0,
+      employee: 0
+    },
+    aiRating: {
+      verdict: 'NEUTRAL / VALUATION WATCH',
+      score: 81,
+      tag: 'Fast-Fashion Disrupter',
+      summary: 'Ultra-fast agile apparel supply chain with massive Gen-Z reach, but facing global tariff and regulatory hurdles.',
+      strengths: [
+        'Real-time demand algorithmic forecasting with minimal inventory waste.',
+        'Dominant mobile app downloads surpassing Amazon in multiple markets.',
+        'Strong cash generation with over $2B annual net income.'
+      ],
+      risks: [
+        'Geopolitical and import tariff scrutiny in US & Europe.',
+        'Intense competition from Temu / PDD Holdings.'
+      ],
+      financials: {
+        revenue3YCAGR: '38.0%',
+        ebitdaMargin: '12.4%',
+        patMargin: '7.8%',
+        peRatio: 26.5,
+        industryPE: 22.0,
+        debtToEquity: '0.20',
+        ronw: '21.0%'
+      },
+      peers: [
+        { name: 'Inditex (Zara)', pe: 24.2, pb: 5.8 },
+        { name: 'H&M Hennes', pe: 18.5, pb: 3.2 }
+      ]
+    }
+  },
+  // ================= LISTED US IPOS =================
+  {
+    id: 'US_IPO_RDDT',
+    name: 'Reddit Inc.',
+    symbol: 'RDDT',
+    category: 'NYSE',
+    market: 'US',
+    currency: '$',
+    status: 'LISTED',
+    badge: '+101.2% TOTAL RETURN',
+    sector: 'Social Media & AI Data Licensing',
+    exchange: 'NYSE',
+    openDate: '2026-03-20',
+    closeDate: '2026-03-22',
+    allotmentDate: '2026-03-23',
+    listingDate: '2026-03-25',
+    priceRange: { min: 31, max: 34 },
+    lotSize: 10,
+    minInvestment: 340,
+    issueSize: 748,
+    freshIssue: 519,
+    ofs: 229,
+    issuePrice: 34.00,
+    listingPrice: 47.00,
+    currentPrice: 68.40,
+    listingGainPct: 38.24,
+    totalGainPct: 101.18,
+    gmp: {
+      value: 13.00,
+      percentage: 38.24,
+      expectedListingPrice: 47.00,
+      trend: 'EXPANDING',
+      updatedAt: 'Listed'
+    },
+    subscription: {
+      overall: 9.20,
+      qib: 15.40,
+      nii: 7.80,
+      retail: 4.90,
+      employee: 3.20
+    },
+    aiRating: {
+      verdict: 'ACCUMULATE ON DIPS',
+      score: 89,
+      tag: 'AI Content Licensing Leader',
+      summary: 'Landmark tech listing turning profitable. Multi-year data licensing deals with Google and OpenAI for LLM pre-training represent high-margin revenue.',
+      strengths: [
+        'Over 80M daily active unique users with authentic human discussion.',
+        'High-margin AI training data licensing contracts exceeding $200M.',
+        'Advertising monetization accelerating with AI search conversion.'
+      ],
+      risks: [
+        'Volatile user sentiment regarding platform moderation changes.',
+        'Search engine algorithmic volatility impacting organic discovery.'
+      ],
+      financials: {
+        revenue3YCAGR: '32.4%',
+        ebitdaMargin: '24.0%',
+        patMargin: '12.5%',
+        peRatio: 44.0,
+        industryPE: 32.0,
+        debtToEquity: '0.02',
+        ronw: '18.4%'
+      },
+      peers: [
+        { name: 'Pinterest Inc.', pe: 28.5, pb: 4.1 },
+        { name: 'Snap Inc.', pe: 35.0, pb: 3.8 }
+      ]
+    }
+  },
+  {
+    id: 'US_IPO_ALAB',
+    name: 'Astera Labs Inc.',
+    symbol: 'ALAB',
+    category: 'NASDAQ',
+    market: 'US',
+    currency: '$',
+    status: 'LISTED',
+    badge: '+106.1% TOTAL RETURN',
+    sector: 'AI Semiconductor Connectivity',
+    exchange: 'NASDAQ',
+    openDate: '2026-03-18',
+    closeDate: '2026-03-20',
+    allotmentDate: '2026-03-21',
+    listingDate: '2026-03-24',
+    priceRange: { min: 32, max: 36 },
+    lotSize: 10,
+    minInvestment: 360,
+    issueSize: 713,
+    freshIssue: 604,
+    ofs: 109,
+    issuePrice: 36.00,
+    listingPrice: 52.50,
+    currentPrice: 74.20,
+    listingGainPct: 45.83,
+    totalGainPct: 106.11,
+    gmp: {
+      value: 16.50,
+      percentage: 45.83,
+      expectedListingPrice: 52.50,
+      trend: 'EXPANDING',
+      updatedAt: 'Listed'
+    },
+    subscription: {
+      overall: 12.80,
+      qib: 22.40,
+      nii: 9.60,
+      retail: 6.20,
+      employee: 4.80
+    },
+    aiRating: {
+      verdict: 'LONG-TERM COMPOUNDER',
+      score: 93,
+      tag: 'PCIe / CXL AI Connectivity',
+      summary: 'Mission-critical semiconductor connectivity hardware for Nvidia, AMD, and Intel cloud hyperscaler server clusters.',
+      strengths: [
+        'Aries Smart DSP retimers critical for PCIe Gen 5 and Gen 6 GPUs.',
+        'Gross margins exceeding 77% with deep customer lock-in.',
+        'Direct beneficiary of trillion-dollar datacenter infrastructure buildout.'
+      ],
+      risks: [
+        'Customer concentration in top 4 cloud hyperscalers.',
+        'Cyclicality in enterprise datacenter capital expenditure.'
+      ],
+      financials: {
+        revenue3YCAGR: '68.0%',
+        ebitdaMargin: '38.5%',
+        patMargin: '24.0%',
+        peRatio: 52.0,
+        industryPE: 40.0,
+        debtToEquity: '0.00',
+        ronw: '29.5%'
+      },
+      peers: [
+        { name: 'Marvell Technology', pe: 42.0, pb: 3.4 },
+        { name: 'Broadcom Inc.', pe: 34.5, pb: 12.8 }
+      ]
+    }
+  }
+];
+
 const { fetchRealIPOs } = require('./realIpoService');
 
 /**
  * Filter and query IPOs with real-time exchange data
  */
-async function getIPOList({ status = 'ALL', category = 'ALL', search = '' } = {}) {
-  let dataset = IPO_DATASET;
-  try {
-    const liveIPOs = await fetchRealIPOs();
-    if (liveIPOs && liveIPOs.length > 0) {
-      dataset = liveIPOs;
+/**
+ * Filter and query IPOs with real-time exchange data
+ */
+async function getIPOList({ status = 'ALL', category = 'ALL', search = '', market = 'IN' } = {}) {
+  const isUS = (market || 'IN').toUpperCase() === 'US';
+  let dataset = isUS ? US_IPO_DATASET : IPO_DATASET;
+  const bidsList = isUS ? userUSPaperBids : userPaperBids;
+
+  if (!isUS) {
+    try {
+      const liveIPOs = await fetchRealIPOs();
+      if (liveIPOs && liveIPOs.length > 0) {
+        dataset = liveIPOs;
+      }
+    } catch (err) {
+      console.warn('Real IPO list fallback to dataset:', err.message);
     }
-  } catch (err) {
-    console.warn('Real IPO list fallback to dataset:', err.message);
   }
 
   let list = [...dataset];
@@ -700,11 +1197,13 @@ async function getIPOList({ status = 'ALL', category = 'ALL', search = '' } = {}
   const listedIpos = dataset.filter(i => i.status === 'LISTED');
   const avgListingGain = listedIpos.length > 0 
     ? (listedIpos.reduce((sum, cur) => sum + (cur.listingGainPct || cur.gmp?.percentage || 0), 0) / listedIpos.length).toFixed(1)
-    : '28.4';
+    : (isUS ? '42.0' : '28.4');
 
-  const totalVirtualBlocked = userPaperBids.reduce((sum, b) => sum + (b.totalBlocked || 0), 0);
+  const totalVirtualBlocked = bidsList.reduce((sum, b) => sum + (b.totalBlocked || 0), 0);
 
   return {
+    market: isUS ? 'US' : 'IN',
+    currency: isUS ? '$' : '₹',
     ipos: list,
     stats: {
       activeCount,
@@ -713,7 +1212,7 @@ async function getIPOList({ status = 'ALL', category = 'ALL', search = '' } = {}
       highestGmpPct: `+${highestGmp}%`,
       avgListingGainPct: `+${avgListingGain}%`,
       totalVirtualBlocked,
-      activeBidsCount: userPaperBids.length,
+      activeBidsCount: bidsList.length,
       isRealTimeFeed: true
     }
   };
@@ -722,36 +1221,44 @@ async function getIPOList({ status = 'ALL', category = 'ALL', search = '' } = {}
 /**
  * Get detailed analysis for a specific IPO
  */
-async function getIPODetails(ipoId) {
-  let dataset = IPO_DATASET;
-  try {
-    const liveIPOs = await fetchRealIPOs();
-    if (liveIPOs && liveIPOs.length > 0) {
-      dataset = liveIPOs;
+async function getIPODetails(ipoId, market = 'IN') {
+  const isUS = (market || '').toUpperCase() === 'US' || (ipoId && ipoId.startsWith('US_'));
+  let dataset = isUS ? US_IPO_DATASET : IPO_DATASET;
+  if (!isUS) {
+    try {
+      const liveIPOs = await fetchRealIPOs();
+      if (liveIPOs && liveIPOs.length > 0) {
+        dataset = liveIPOs;
+      }
+    } catch (err) {
+      // fallback
     }
-  } catch (err) {
-    // fallback
   }
 
-  const ipo = dataset.find(item => item.id === ipoId) || IPO_DATASET.find(item => item.id === ipoId);
+  const ipo = dataset.find(item => item.id === ipoId) || US_IPO_DATASET.find(item => item.id === ipoId) || IPO_DATASET.find(item => item.id === ipoId);
   return ipo || null;
 }
 
 /**
  * Submit Paper Bid / Virtual IPO Application on real-time IPOs
  */
-async function submitPaperBid({ ipoId, lots = 1, category = 'RETAIL', upiId = 'trader@okhdfcbank' }) {
-  let dataset = IPO_DATASET;
-  try {
-    const liveIPOs = await fetchRealIPOs();
-    if (liveIPOs && liveIPOs.length > 0) {
-      dataset = liveIPOs;
+async function submitPaperBid({ ipoId, lots = 1, category = 'RETAIL', upiId = '', market = 'IN' }) {
+  const isUS = (market || '').toUpperCase() === 'US' || (ipoId && ipoId.startsWith('US_'));
+  let dataset = isUS ? US_IPO_DATASET : IPO_DATASET;
+  const bidsList = isUS ? userUSPaperBids : userPaperBids;
+
+  if (!isUS) {
+    try {
+      const liveIPOs = await fetchRealIPOs();
+      if (liveIPOs && liveIPOs.length > 0) {
+        dataset = liveIPOs;
+      }
+    } catch (err) {
+      // fallback
     }
-  } catch (err) {
-    // fallback
   }
 
-  const ipo = dataset.find(item => item.id === ipoId) || IPO_DATASET.find(item => item.id === ipoId);
+  const ipo = dataset.find(item => item.id === ipoId) || (isUS ? US_IPO_DATASET : IPO_DATASET).find(item => item.id === ipoId);
   if (!ipo) {
     throw new Error('IPO not found');
   }
@@ -773,8 +1280,13 @@ async function submitPaperBid({ ipoId, lots = 1, category = 'RETAIL', upiId = 't
     oddsText = `1 in ${Math.round(retailSub)} (~${oddsPct}%)`;
   }
 
+  const currencySymbol = isUS ? '$' : '₹';
+  const defaultAccount = isUS ? 'US-IBKR-94021' : 'trader@okhdfcbank';
+
   const newBid = {
-    id: `BID_${Date.now().toString().slice(-4)}`,
+    id: `${isUS ? 'US_' : ''}BID_${Date.now().toString().slice(-4)}`,
+    market: isUS ? 'US' : 'IN',
+    currency: currencySymbol,
     ipoId: ipo.id,
     companyName: ipo.name,
     symbol: ipo.symbol,
@@ -784,7 +1296,7 @@ async function submitPaperBid({ ipoId, lots = 1, category = 'RETAIL', upiId = 't
     shares: totalShares,
     bidPrice: ipo.priceRange.max,
     totalBlocked,
-    upiId: upiId || 'trader@okhdfcbank',
+    upiId: upiId || defaultAccount,
     allotmentStatus: 'PENDING',
     listingStatus: 'UPCOMING',
     allottedShares: 0,
@@ -796,11 +1308,13 @@ async function submitPaperBid({ ipoId, lots = 1, category = 'RETAIL', upiId = 't
     isRealTimeIPO: true
   };
 
-  userPaperBids.unshift(newBid);
+  bidsList.unshift(newBid);
 
   return {
     success: true,
-    message: `Virtual application submitted for ${numLots} lot(s) (${totalShares} shares) of ${ipo.name}! ₹${totalBlocked.toLocaleString()} blocked in sandbox.`,
+    market: isUS ? 'US' : 'IN',
+    currency: currencySymbol,
+    message: `Virtual application submitted for ${numLots} lot(s) (${totalShares} shares) of ${ipo.name}! ${currencySymbol}${totalBlocked.toLocaleString()} blocked in sandbox.`,
     bid: newBid
   };
 }
@@ -808,15 +1322,20 @@ async function submitPaperBid({ ipoId, lots = 1, category = 'RETAIL', upiId = 't
 /**
  * Get all active and past paper bids
  */
-function getUserBids() {
-  return userPaperBids;
+function getUserBids(market = 'IN') {
+  return (market || 'IN').toUpperCase() === 'US' ? userUSPaperBids : userPaperBids;
 }
 
 /**
  * Simulate Listing Day result for a bid
  */
 function simulateListingDay(bidId) {
-  const bid = userPaperBids.find(b => b.id === bidId);
+  let isUS = bidId.startsWith('US_');
+  let bid = userUSPaperBids.find(b => b.id === bidId);
+  if (!bid) {
+    bid = userPaperBids.find(b => b.id === bidId);
+    isUS = false;
+  }
   if (!bid) {
     throw new Error('Bid record not found');
   }
@@ -829,7 +1348,10 @@ function simulateListingDay(bidId) {
     };
   }
 
-  const ipo = IPO_DATASET.find(item => item.id === bid.ipoId);
+  const currencySymbol = isUS ? '$' : '₹';
+  const ipo = (isUS ? US_IPO_DATASET : IPO_DATASET).find(item => item.id === bid.ipoId) 
+           || US_IPO_DATASET.find(item => item.id === bid.ipoId)
+           || IPO_DATASET.find(item => item.id === bid.ipoId);
   if (!ipo) {
     throw new Error('Linked IPO not found');
   }
@@ -846,7 +1368,7 @@ function simulateListingDay(bidId) {
     bid.pnlRealized = true;
     return {
       success: true,
-      message: `Allotment result: Not Allotted (Retail oversubscribed ${retailSub}x). Full funds of ₹${bid.totalBlocked.toLocaleString()} unblocked.`,
+      message: `Allotment result: Not Allotted (Retail oversubscribed ${retailSub}x). Full funds of ${currencySymbol}${bid.totalBlocked.toLocaleString()} unblocked.`,
       bid
     };
   }
@@ -858,9 +1380,11 @@ function simulateListingDay(bidId) {
 
   const gmpVal = ipo.gmp ? ipo.gmp.value : (ipo.priceRange.max * 0.15);
   // Add a slight realistic randomness (+/- 5%) to simulated listing price
-  const simulatedListingPrice = Math.round(ipo.priceRange.max + gmpVal * (0.95 + Math.random() * 0.1));
+  const simulatedListingPrice = isUS 
+    ? +(ipo.priceRange.max + gmpVal * (0.95 + Math.random() * 0.1)).toFixed(2)
+    : Math.round(ipo.priceRange.max + gmpVal * (0.95 + Math.random() * 0.1));
   const gainPerShare = simulatedListingPrice - ipo.priceRange.max;
-  const realizedPL = gainPerShare * bid.allottedShares;
+  const realizedPL = +(gainPerShare * bid.allottedShares).toFixed(2);
   const listingGainPct = Number(((gainPerShare / ipo.priceRange.max) * 100).toFixed(2));
 
   bid.listingPrice = simulatedListingPrice;
@@ -870,7 +1394,7 @@ function simulateListingDay(bidId) {
 
   return {
     success: true,
-    message: `🎉 Bumper Allotment! Allotted 1 Lot (${bid.allottedShares} shares). Listed at ₹${simulatedListingPrice} (+${listingGainPct}%). Realized P&L: +₹${realizedPL.toLocaleString()}!`,
+    message: `🎉 Bumper Allotment! Allotted 1 Lot (${bid.allottedShares} shares). Listed at ${currencySymbol}${simulatedListingPrice} (+${listingGainPct}%). Realized P&L: +${currencySymbol}${realizedPL.toLocaleString()}!`,
     bid
   };
 }

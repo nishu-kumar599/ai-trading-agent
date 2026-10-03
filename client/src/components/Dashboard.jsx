@@ -101,12 +101,15 @@ export const Dashboard = () => {
   };
 
   useEffect(() => {
+    if (marketRegion === 'US' && activeMainTab === 'f_and_o') {
+      setActiveMainTab('indices');
+    }
     fetchAgentStatus();
     fetchRealDashboardData();
     // High-frequency 2-second real-time dashboard updates (Groww style)
     const interval = setInterval(fetchRealDashboardData, 2000);
     return () => clearInterval(interval);
-  }, [marketRegion]);
+  }, [marketRegion, activeMainTab]);
 
   const totalRealizedPL = tradeHistory.reduce((sum, t) => sum + (t.realizedPL || 0), 0);
   const totalUnrealizedPL = activePositions.reduce((sum, p) => sum + (p.unrealizedPL || 0), 0);
@@ -144,16 +147,13 @@ export const Dashboard = () => {
             market: 'US'
           };
         } else {
+          const aapl = (realQuotes?.stocks || []).find(s => s.symbol === 'AAPL');
           payload = {
-            symbol: 'SPY',
-            horizon: 'F_AND_O',
-            direction: 'BUY_CALL',
-            price: 4.25,
+            symbol: 'AAPL',
+            horizon: 'SHORT_TERM',
+            direction: 'BUY',
+            price: aapl?.price || 228.50,
             quantity: 10,
-            optionDetails: {
-              recommendedStrike: 'SPY $575 CALL',
-              premium: 4.25
-            },
             market: 'US'
           };
         }
@@ -198,7 +198,7 @@ export const Dashboard = () => {
       if (data && data.success) {
         setTestMessage({
           type: 'success',
-          text: `Paper Sandbox Order Executed on Real Spot! ${payload.direction} ${payload.quantity} ${payload.symbol} @ ₹${payload.price}. Stop-Loss & Profit-Lock active.`
+          text: `Paper Sandbox Order Executed on Real Spot! ${payload.direction} ${payload.quantity} ${payload.symbol} @ ${currency}${payload.price}. Stop-Loss & Profit-Lock active.`
         });
         await fetchRealDashboardData();
         setActiveMainTab('positions');
@@ -215,7 +215,7 @@ export const Dashboard = () => {
   const handleSimulateSurge = async () => {
     setIsTestingAction(true);
     try {
-      const posRes = await fetch('/api/strategies/positions');
+      const posRes = await fetch(`/api/strategies/positions?market=${marketRegion}`);
       const posText = await posRes.text();
       const posData = posText ? JSON.parse(posText) : null;
       if (posData && posData.activePositions && posData.activePositions.length > 0) {
@@ -230,7 +230,7 @@ export const Dashboard = () => {
         const tickData = tickText ? JSON.parse(tickText) : null;
         setTestMessage({
           type: 'success',
-          text: `📈 Simulated +1.8% Surge on ${targetPos.symbol} to ₹${newPrice}! Stop-Loss ratcheted to ₹${tickData?.position?.stopLoss || newPrice} (Guaranteed Zero-Loss Locked).`
+          text: `📈 Simulated +1.8% Surge on ${targetPos.symbol} to ${currency}${newPrice}! Stop-Loss ratcheted to ${currency}${tickData?.position?.stopLoss || newPrice} (Guaranteed Zero-Loss Locked).`
         });
         setActiveMainTab('positions');
       } else {
@@ -250,10 +250,10 @@ export const Dashboard = () => {
     setIsTestingAction(true);
     try {
       await fetch('/api/strategies/reset-test', { method: 'POST' });
-      setTestBalance(100000);
+      setTestBalance(marketRegion === 'US' ? 25000 : 100000);
       setTestMessage({
         type: 'success',
-        text: '🔄 Testing Sandbox reset to ₹100,000 initial virtual capital and baseline positions.'
+        text: `🔄 Testing Sandbox reset to ${currency}${marketRegion === 'US' ? '25,000' : '100,000'} initial virtual capital and baseline positions.`
       });
     } catch (err) {
       setTestMessage({ type: 'error', text: 'Reset failed: ' + err.message });
@@ -593,7 +593,7 @@ export const Dashboard = () => {
               </button>
 
               <button
-                onClick={() => handleExecuteQuickTest('F_AND_O')}
+                onClick={() => handleExecuteQuickTest(marketRegion === 'US' ? 'SHORT_TERM' : 'F_AND_O')}
                 disabled={isTestingAction}
                 style={{
                   background: 'rgba(255, 255, 255, 0.05)',
@@ -611,7 +611,7 @@ export const Dashboard = () => {
                 }}
               >
                 <Layers size={13} color="var(--accent-cyan)" />
-                {marketRegion === 'US' ? 'Test Buy SPY $575 Call' : 'Test Buy Nifty 24500 CE'}
+                {marketRegion === 'US' ? 'Test Buy AAPL (Swing)' : 'Test Buy Nifty 24500 CE'}
               </button>
 
               <button
@@ -791,7 +791,7 @@ export const Dashboard = () => {
                 </div>
               )}
 
-              {activeMainTab === 'f_and_o' && (
+              {activeMainTab === 'f_and_o' && marketRegion !== 'US' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   <SegmentExplainer segment="F_AND_O" />
                   <StrategyCenter initialHorizon="F_AND_O" hideInternalTabs={true} />

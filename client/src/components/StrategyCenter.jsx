@@ -26,13 +26,17 @@ import { useMarket } from '../context/MarketContext';
 
 export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs = false }) => {
   const { marketRegion, currency, formatCurrency } = useMarket();
-  const [selectedHorizon, setSelectedHorizon] = useState(initialHorizon);
+  const [selectedHorizon, setSelectedHorizon] = useState(
+    marketRegion === 'US' && initialHorizon === 'F_AND_O' ? 'INTRADAY' : initialHorizon
+  );
 
   useEffect(() => {
-    if (initialHorizon) {
+    if (marketRegion === 'US' && selectedHorizon === 'F_AND_O') {
+      setSelectedHorizon('INTRADAY');
+    } else if (initialHorizon && (marketRegion !== 'US' || initialHorizon !== 'F_AND_O')) {
       setSelectedHorizon(initialHorizon);
     }
-  }, [initialHorizon]);
+  }, [initialHorizon, marketRegion]);
   const [scanData, setScanData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [activePositions, setActivePositions] = useState([]);
@@ -53,7 +57,7 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
     { id: 'SHORT_TERM', label: 'Short-Term (1-5d)', icon: TrendingUp, badge: 'Swing Breakout' },
     { id: 'MEDIUM_TERM', label: 'Medium-Term (2-12w)', icon: Compass, badge: 'Positional Trend' },
     { id: 'LONG_TERM', label: 'Long-Term (Months+)', icon: Calendar, badge: 'Value & DCA' },
-    { id: 'F_AND_O', label: 'Futures & Options', icon: Layers, badge: 'Calls, Puts & Spreads' }
+    ...(marketRegion !== 'US' ? [{ id: 'F_AND_O', label: 'Futures & Options', icon: Layers, badge: 'Calls, Puts & Spreads' }] : [])
   ];
 
   // Fetch scan data for chosen horizon
@@ -407,7 +411,7 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
                     </td>
                     <td>
                       <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#fff' }}>
-                        ₹{selectedHorizon === 'F_AND_O' ? stock.optPremium : stock.price}
+                        {currency}{selectedHorizon === 'F_AND_O' ? stock.optPremium : stock.price}
                       </div>
                       <div style={{ fontSize: '0.72rem', color: String(stock.changePct || '').startsWith('+') ? '#34d399' : '#f43f5e' }}>
                         {stock.changePct || '0.00%'}
@@ -426,20 +430,20 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
                       </span>
                     </td>
                     <td style={{ fontFamily: 'var(--font-mono)', color: '#34d399', fontWeight: 600 }}>
-                      ₹{stock.target1}
+                      {currency}{stock.target1}
                     </td>
                     <td style={{ fontFamily: 'var(--font-mono)', color: '#6ee7b7' }}>
-                      ₹{stock.target2}
+                      {currency}{stock.target2}
                     </td>
                     <td style={{ fontFamily: 'var(--font-mono)', color: '#f87171' }}>
-                      ₹{stock.stopLoss}
+                      {currency}{stock.stopLoss}
                     </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <div style={{ width: '45px', height: '5px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
-                          <div style={{ width: `${stock.confidence}%`, height: '100%', background: '#10b981' }}></div>
+                          <div style={{ width: `${stock.confidence || 88}%`, height: '100%', background: '#10b981' }}></div>
                         </div>
-                        <span style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>{stock.confidence}%</span>
+                        <span style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>{stock.confidence || 88}%</span>
                       </div>
                     </td>
                     <td>
@@ -521,16 +525,16 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.85rem' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Entry Price:</span>
                 <span style={{ fontFamily: 'var(--font-mono)', color: '#fff' }}>
-                  ₹{selectedHorizon === 'F_AND_O' ? selectedStockToTrade.optPremium : selectedStockToTrade.price}
+                  {currency}{selectedHorizon === 'F_AND_O' ? selectedStockToTrade.optPremium : selectedStockToTrade.price}
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.85rem' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Target 1 (Lock Profit):</span>
-                <span style={{ fontFamily: 'var(--font-mono)', color: '#34d399' }}>₹{selectedStockToTrade.target1}</span>
+                <span style={{ fontFamily: 'var(--font-mono)', color: '#34d399' }}>{currency}{selectedStockToTrade.target1}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Initial Stop-Loss:</span>
-                <span style={{ fontFamily: 'var(--font-mono)', color: '#f87171' }}>₹{selectedStockToTrade.stopLoss}</span>
+                <span style={{ fontFamily: 'var(--font-mono)', color: '#f87171' }}>{currency}{selectedStockToTrade.stopLoss}</span>
               </div>
             </div>
 
@@ -563,7 +567,7 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
               }}>
                 <Clock size={16} style={{ flexShrink: 0, color: '#f59e0b' }} />
                 <div>
-                  <strong>Exchange Closed:</strong> Placed as an After-Market Order (AMO) at official closing settlement. Live tracking activates at 09:15 AM IST.
+                  <strong>Exchange Closed:</strong> Placed as an After-Market Order (AMO) at official closing settlement. Live tracking activates at {marketRegion === 'US' ? '09:30 AM EST' : '09:15 AM IST'}.
                 </div>
               </div>
             )}
@@ -642,7 +646,9 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
             <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: '2px' }}>
               {isMarketOpen 
                 ? 'Prices and returns update live every 1.5s with automated Zero-Loss Breakeven & Trailing Stop' 
-                : 'Exchange is closed (09:15 - 15:30 IST). Prices are frozen at official closing settlement (Zerodha/Groww aligned).'}
+                : (marketRegion === 'US' 
+                    ? 'Exchange is closed (09:30 - 16:00 EST). Prices are frozen at official closing settlement.' 
+                    : 'Exchange is closed (09:15 - 15:30 IST). Prices are frozen at official closing settlement (Zerodha/Groww aligned).')}
             </p>
           </div>
           <span style={{ fontSize: '0.8rem', color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '4px 10px', borderRadius: '6px', fontWeight: 700 }}>
@@ -681,7 +687,7 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
                 alignItems: 'baseline',
                 gap: '8px'
               }}>
-                {(activePositions.reduce((sum, p) => sum + (p.unrealizedPL || 0), 0)) >= 0 ? '+' : ''}₹{(activePositions.reduce((sum, p) => sum + (p.unrealizedPL || 0), 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                {(activePositions.reduce((sum, p) => sum + (p.unrealizedPL || 0), 0)) >= 0 ? '+' : ''}{currency}{(activePositions.reduce((sum, p) => sum + (p.unrealizedPL || 0), 0)).toLocaleString(marketRegion === 'US' ? 'en-US' : 'en-IN', { minimumFractionDigits: 2 })}
                 <span style={{ fontSize: '0.95rem', fontWeight: 700 }}>
                   ({(activePositions.reduce((sum, p) => sum + (p.unrealizedPL || 0), 0)) >= 0 ? '+' : ''}{((activePositions.reduce((sum, p) => sum + (p.unrealizedPL || 0), 0)) / (activePositions.reduce((sum, p) => sum + (p.entryPrice * p.quantity), 0) || 1) * 100).toFixed(2)}%)
                 </span>
@@ -692,13 +698,13 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
               <div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: 600 }}>Total Margin Invested</div>
                 <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
-                  ₹{(activePositions.reduce((sum, p) => sum + (p.entryPrice * p.quantity), 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  {currency}{(activePositions.reduce((sum, p) => sum + (p.entryPrice * p.quantity), 0)).toLocaleString(marketRegion === 'US' ? 'en-US' : 'en-IN', { minimumFractionDigits: 2 })}
                 </div>
               </div>
               <div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: 600 }}>Current Portfolio Value</div>
                 <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#38bdf8', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
-                  ₹{(activePositions.reduce((sum, p) => sum + (p.currentPrice * p.quantity), 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  {currency}{(activePositions.reduce((sum, p) => sum + (p.currentPrice * p.quantity), 0)).toLocaleString(marketRegion === 'US' ? 'en-US' : 'en-IN', { minimumFractionDigits: 2 })}
                 </div>
               </div>
             </div>
@@ -752,7 +758,7 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
                       <td>
                         <span style={{ fontSize: '0.75rem', color: '#93c5fd' }}>{pos.horizon}</span>
                       </td>
-                      <td style={{ fontFamily: 'var(--font-mono)' }}>₹{Number(pos.entryPrice || 0).toFixed(2)}</td>
+                      <td style={{ fontFamily: 'var(--font-mono)' }}>{pos.currency || currency}{Number(pos.entryPrice || 0).toFixed(2)}</td>
                       <td>
                         <div style={{
                           fontFamily: 'var(--font-mono)',
@@ -763,11 +769,11 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
                           gap: '6px'
                         }}>
                           <span className="pulse-dot" style={{ background: isProfitable ? '#10b981' : '#f87171' }}></span>
-                          ₹{Number(pos.currentPrice || 0).toFixed(2)}
+                          {pos.currency || currency}{Number(pos.currentPrice || 0).toFixed(2)}
                         </div>
                       </td>
                       <td style={{ fontFamily: 'var(--font-mono)', color: pos.breakevenActivated ? '#34d399' : '#f87171' }}>
-                        ₹{pos.stopLoss}
+                        {pos.currency || currency}{pos.stopLoss}
                         {pos.breakevenActivated && (
                           <span style={{ fontSize: '0.68rem', display: 'block', color: '#34d399' }}>
                             (Locked at Breakeven)
@@ -788,7 +794,7 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
                           width: 'fit-content'
                         }}>
                           {isProfitable ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                          {isProfitable ? '+' : ''}₹{Number(pos.unrealizedPL || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })} ({Number(pos.unrealizedPLPct || 0) >= 0 ? `+${pos.unrealizedPLPct || 0}%` : `${pos.unrealizedPLPct || 0}%`})
+                          {isProfitable ? '+' : ''}{pos.currency || currency}{Number(pos.unrealizedPL || 0).toLocaleString((pos.market || marketRegion) === 'US' ? 'en-US' : 'en-IN', { minimumFractionDigits: 2 })} ({Number(pos.unrealizedPLPct || 0) >= 0 ? `+${pos.unrealizedPLPct || 0}%` : `${pos.unrealizedPLPct || 0}%`})
                         </div>
                       </td>
                       <td>

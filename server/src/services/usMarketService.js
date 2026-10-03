@@ -107,6 +107,7 @@ const US_FALLBACK_STOCKS = [
     volumeRatio: 1.45,
     trend: 'BULLISH',
     signal: 'BUY',
+    confidence: 93,
     intradaySignal: 'BUY',
     swingSignal: 'BUY',
     mediumTermSignal: 'BUY',
@@ -137,6 +138,7 @@ const US_FALLBACK_STOCKS = [
     volumeRatio: 1.15,
     trend: 'BULLISH',
     signal: 'BUY',
+    confidence: 89,
     intradaySignal: 'BUY',
     swingSignal: 'BUY',
     mediumTermSignal: 'BUY',
@@ -167,6 +169,7 @@ const US_FALLBACK_STOCKS = [
     volumeRatio: 1.30,
     trend: 'BEARISH',
     signal: 'SELL',
+    confidence: 82,
     intradaySignal: 'SELL',
     swingSignal: 'SELL',
     mediumTermSignal: 'BUY',
@@ -197,6 +200,7 @@ const US_FALLBACK_STOCKS = [
     volumeRatio: 1.10,
     trend: 'BULLISH',
     signal: 'BUY',
+    confidence: 91,
     intradaySignal: 'BUY',
     swingSignal: 'BUY',
     mediumTermSignal: 'BUY',
@@ -227,6 +231,7 @@ const US_FALLBACK_STOCKS = [
     volumeRatio: 1.20,
     trend: 'BULLISH',
     signal: 'BUY',
+    confidence: 88,
     intradaySignal: 'BUY',
     swingSignal: 'BUY',
     mediumTermSignal: 'BUY',
@@ -257,6 +262,7 @@ const US_FALLBACK_STOCKS = [
     volumeRatio: 1.05,
     trend: 'BULLISH',
     signal: 'BUY',
+    confidence: 86,
     intradaySignal: 'BUY',
     swingSignal: 'BUY',
     mediumTermSignal: 'BUY',
@@ -287,6 +293,7 @@ const US_FALLBACK_STOCKS = [
     volumeRatio: 1.35,
     trend: 'BULLISH',
     signal: 'BUY',
+    confidence: 92,
     intradaySignal: 'BUY',
     swingSignal: 'BUY',
     mediumTermSignal: 'BUY',
@@ -317,6 +324,7 @@ const US_FALLBACK_STOCKS = [
     volumeRatio: 1.25,
     trend: 'BULLISH',
     signal: 'BUY',
+    confidence: 87,
     intradaySignal: 'BUY',
     swingSignal: 'BUY',
     mediumTermSignal: 'BUY',
@@ -347,6 +355,7 @@ const US_FALLBACK_STOCKS = [
     volumeRatio: 1.10,
     trend: 'BULLISH',
     signal: 'BUY',
+    confidence: 94,
     intradaySignal: 'BUY',
     swingSignal: 'BUY',
     mediumTermSignal: 'BUY',
@@ -377,6 +386,7 @@ const US_FALLBACK_STOCKS = [
     volumeRatio: 1.18,
     trend: 'BULLISH',
     signal: 'BUY',
+    confidence: 93,
     intradaySignal: 'BUY',
     swingSignal: 'BUY',
     mediumTermSignal: 'BUY',
@@ -595,6 +605,10 @@ async function getUSMarketUniverse(horizon = 'INTRADAY') {
       }
     }
 
+    const baseConfidence = stock.confidence || 88;
+    const volBonus = stock.volumeRatio ? Math.min(stock.volumeRatio * 2, 4) : 2;
+    const dynamicConfidence = Math.min(96, Math.max(76, Math.round(baseConfidence + (action === 'BUY' && stock.trend === 'BULLISH' ? 2 : -2) + (volBonus - 2))));
+
     return {
       ...stock,
       activeHorizon: horizon,
@@ -603,6 +617,7 @@ async function getUSMarketUniverse(horizon = 'INTRADAY') {
       target1,
       target2,
       stopLoss,
+      confidence: dynamicConfidence,
       rationale,
       profitLock: {
         breakevenTriggerPct: horizon === 'INTRADAY' ? 1.0 : (horizon === 'SHORT_TERM' ? 1.8 : 3.0),

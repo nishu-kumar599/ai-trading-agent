@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { X, TrendingUp, TrendingDown, Target, Shield, Clock, BarChart2 } from 'lucide-react';
+import { useMarket } from '../context/MarketContext';
 
 export const CandlestickModal = ({ stock, onClose }) => {
+  const { marketRegion, currency } = useMarket();
   const [timeframe, setTimeframe] = useState('15m');
 
   if (!stock) return null;
@@ -134,7 +136,7 @@ export const CandlestickModal = ({ stock, onClose }) => {
               </span>
             </div>
             <div style={{ fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#fff', marginTop: '4px' }}>
-              ₹{Number(price).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+              {currency}{Number(price).toLocaleString(marketRegion === 'US' ? 'en-US' : 'en-IN', { minimumFractionDigits: 2 })}
             </div>
           </div>
 
@@ -195,15 +197,15 @@ export const CandlestickModal = ({ stock, onClose }) => {
         }}>
           <span style={{ color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '4px' }}>
             <span style={{ width: '12px', height: '2px', background: '#38bdf8', display: 'inline-block' }}></span>
-            VWAP: ₹{vwap}
+            VWAP: {currency}{vwap}
           </span>
           <span style={{ color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '4px' }}>
             <span style={{ width: '12px', height: '2px', background: '#f59e0b', display: 'inline-block' }}></span>
-            EMA 9: ₹{ema9}
+            EMA 9: {currency}{ema9}
           </span>
           <span style={{ color: '#a855f7', display: 'flex', alignItems: 'center', gap: '4px' }}>
             <span style={{ width: '12px', height: '2px', background: '#a855f7', display: 'inline-block' }}></span>
-            EMA 21: ₹{ema21}
+            EMA 21: {currency}{ema21}
           </span>
           <span style={{ color: 'var(--text-muted)' }}>
             RSI (14): <strong style={{ color: '#fff' }}>{rsi}</strong>
@@ -228,7 +230,7 @@ export const CandlestickModal = ({ stock, onClose }) => {
                 <g key={idx}>
                   <line x1={paddingX} y1={y} x2={chartWidth - paddingX} y2={y} stroke="rgba(255,255,255,0.06)" strokeDasharray="3 3" />
                   <text x={chartWidth - paddingX + 6} y={y + 3} fill="rgba(255,255,255,0.4)" fontSize="9" fontFamily="monospace">
-                    ₹{priceAtLine}
+                    {currency}{priceAtLine}
                   </text>
                 </g>
               );
@@ -239,7 +241,7 @@ export const CandlestickModal = ({ stock, onClose }) => {
               <g>
                 <line x1={paddingX} y1={getY(target2)} x2={chartWidth - paddingX} y2={getY(target2)} stroke="#10b981" strokeWidth="1.5" strokeDasharray="4 2" />
                 <text x={paddingX + 6} y={getY(target2) - 4} fill="#10b981" fontSize="10" fontWeight="bold">
-                  🎯 Target 2: ₹{target2}
+                  🎯 Target 2: {currency}{target2}
                 </text>
               </g>
             )}
@@ -249,7 +251,7 @@ export const CandlestickModal = ({ stock, onClose }) => {
               <g>
                 <line x1={paddingX} y1={getY(target1)} x2={chartWidth - paddingX} y2={getY(target1)} stroke="#34d399" strokeWidth="1.5" strokeDasharray="4 2" />
                 <text x={paddingX + 6} y={getY(target1) - 4} fill="#34d399" fontSize="10" fontWeight="bold">
-                  🎯 Target 1 (50% Scale-Out): ₹{target1}
+                  🎯 Target 1 (50% Scale-Out): {currency}{target1}
                 </text>
               </g>
             )}
@@ -258,7 +260,7 @@ export const CandlestickModal = ({ stock, onClose }) => {
             <g>
               <line x1={paddingX} y1={getY(entryPrice)} x2={chartWidth - paddingX} y2={getY(entryPrice)} stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="2 2" />
               <text x={paddingX + 6} y={getY(entryPrice) - 4} fill="#38bdf8" fontSize="10" fontWeight="bold">
-                📍 Entry: ₹{entryPrice}
+                📍 Entry: {currency}{entryPrice}
               </text>
             </g>
 
@@ -267,7 +269,7 @@ export const CandlestickModal = ({ stock, onClose }) => {
               <g>
                 <line x1={paddingX} y1={getY(stopLoss)} x2={chartWidth - paddingX} y2={getY(stopLoss)} stroke="#ef4444" strokeWidth="1.5" strokeDasharray="4 2" />
                 <text x={paddingX + 6} y={getY(stopLoss) + 12} fill="#ef4444" fontSize="10" fontWeight="bold">
-                  🛡️ Stop Loss: ₹{stopLoss}
+                  🛡️ Stop Loss: {currency}{stopLoss}
                 </text>
               </g>
             )}
@@ -314,7 +316,7 @@ export const CandlestickModal = ({ stock, onClose }) => {
           gap: '10px'
         }}>
           <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-            Real-time simulated OHLC candles grounded in live NSE/BSE spot feed. Dynamic overlays show Breakeven and Target levels.
+            Real-time simulated OHLC candles grounded in live {marketRegion === 'US' ? 'NYSE/NASDAQ' : 'NSE/BSE'} spot feed. Dynamic overlays show Breakeven and Target levels.
           </div>
           <button
             onClick={onClose}

@@ -18,22 +18,35 @@ import {
   ExternalLink,
   Wifi
 } from 'lucide-react';
+import { useMarket } from '../context/MarketContext';
 
 export const NewsSentimentTrader = () => {
+  const { marketRegion, currency } = useMarket();
   const [newsList, setNewsList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [customText, setCustomText] = useState('');
-  const [customSymbol, setCustomSymbol] = useState('RELIANCE.NS');
+  const [customSymbol, setCustomSymbol] = useState(marketRegion === 'US' ? 'NVDA' : 'RELIANCE.NS');
   const [analyzingText, setAnalyzingText] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [tradeHorizon, setTradeHorizon] = useState('INTRADAY');
   const [tradeNotice, setTradeNotice] = useState('');
   const [executingTradeId, setExecutingTradeId] = useState(null);
 
+  useEffect(() => {
+    if (marketRegion === 'US') {
+      setCustomSymbol('NVDA');
+      if (tradeHorizon === 'F_AND_O') {
+        setTradeHorizon('INTRADAY');
+      }
+    } else {
+      setCustomSymbol('RELIANCE.NS');
+    }
+  }, [marketRegion]);
+
   const fetchNews = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/sentiment/news');
+      const res = await fetch(`/api/sentiment/news?market=${marketRegion}`);
       const text = await res.text();
       const data = text ? JSON.parse(text) : null;
       if (data && data.success) {
@@ -132,7 +145,28 @@ export const NewsSentimentTrader = () => {
     }
   };
 
-  const sampleHeadlines = [
+  const sampleHeadlines = marketRegion === 'US' ? [
+    {
+      label: '🟢 Positive: NVDA Next-Gen Blackwell Ramps Up',
+      text: 'Nvidia accelerates next-gen Blackwell GPU shipments as hyperscalers expand AI datacenter capex by 40%.',
+      symbol: 'NVDA'
+    },
+    {
+      label: '🔴 Negative: Tesla EV Margin Pressure',
+      text: 'Tesla warns of automotive gross margin compression following competitive price cuts and higher battery component costs.',
+      symbol: 'TSLA'
+    },
+    {
+      label: '🟢 Positive: Apple Intelligence Ecosystem Beat',
+      text: 'Apple posts record services revenue and strong upgrade cycle demand driven by generative AI assistant rollouts.',
+      symbol: 'AAPL'
+    },
+    {
+      label: '🔴 Negative: Fed Rate Uncertainty Weighs on Tech',
+      text: 'Hawkish remarks from Federal Reserve leadership trigger broad-market tech pullback and Treasury yield spikes.',
+      symbol: 'QQQ'
+    }
+  ] : [
     {
       label: '🟢 Positive: Reliance AI & 5G Deal',
       text: 'Reliance Jio secures mega deal with tech consortium and reports 24% revenue surge in 5G services.',
@@ -225,7 +259,7 @@ export const NewsSentimentTrader = () => {
           >
             <option value="INTRADAY">Intraday (Equity)</option>
             <option value="SHORT_TERM">Short-Term Swing</option>
-            <option value="F_AND_O">Futures & Options (Calls/Puts)</option>
+            {marketRegion !== 'US' && <option value="F_AND_O">Futures & Options (Calls/Puts)</option>}
           </select>
 
           <button

@@ -9,11 +9,11 @@ const {
 
 const router = express.Router();
 
-// GET /api/ipo/list?status=ALL&category=ALL&search=
+// GET /api/ipo/list?status=ALL&category=ALL&search=&market=IN|US
 router.get('/list', async (req, res) => {
   try {
-    const { status, category, search } = req.query;
-    const data = await getIPOList({ status, category, search });
+    const { status, category, search, market } = req.query;
+    const data = await getIPOList({ status, category, search, market: (market || 'IN').toUpperCase() });
     res.json({
       success: true,
       ...data
@@ -23,10 +23,10 @@ router.get('/list', async (req, res) => {
   }
 });
 
-// GET /api/ipo/:id/details
+// GET /api/ipo/:id/details?market=IN|US
 router.get('/:id/details', async (req, res) => {
   try {
-    const ipo = await getIPODetails(req.params.id);
+    const ipo = await getIPODetails(req.params.id, req.query.market);
     if (!ipo) {
       return res.status(404).json({ success: false, error: 'IPO not found' });
     }
@@ -42,23 +42,25 @@ router.get('/:id/details', async (req, res) => {
 // POST /api/ipo/bid
 router.post('/bid', async (req, res) => {
   try {
-    const { ipoId, lots, category, upiId } = req.body;
+    const { ipoId, lots, category, upiId, market } = req.body;
     if (!ipoId) {
       return res.status(400).json({ success: false, error: 'ipoId is required' });
     }
-    const result = await submitPaperBid({ ipoId, lots, category, upiId });
+    const result = await submitPaperBid({ ipoId, lots, category, upiId, market });
     res.json(result);
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
   }
 });
 
-// GET /api/ipo/my-bids
+// GET /api/ipo/my-bids?market=IN|US
 router.get('/my-bids', (req, res) => {
   try {
-    const bids = getUserBids();
+    const bids = getUserBids(req.query.market);
     res.json({
       success: true,
+      market: (req.query.market || 'IN').toUpperCase(),
+      currency: (req.query.market || 'IN').toUpperCase() === 'US' ? '$' : '₹',
       bids
     });
   } catch (err) {
