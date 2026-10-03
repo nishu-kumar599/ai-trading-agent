@@ -18,7 +18,8 @@ import {
   ChevronRight,
   Sliders,
   DollarSign,
-  Sparkles
+  Sparkles,
+  Clock
 } from 'lucide-react';
 import { AutoPilotCockpit } from './AutoPilotCockpit';
 import { useMarket } from '../context/MarketContext';

@@ -117,10 +117,13 @@ export const Dashboard = () => {
 
   // Real market Benchmark Index & Breadth
   const benchmarkIdx = marketRegion === 'US'
-    ? (marketDetection?.indices || []).find(i => i.symbol === '^GSPC' || i.name.includes('S&P 500'))
-    : (marketDetection?.indices || []).find(i => i.symbol === '^NSEI' || i.name.includes('NIFTY 50'));
+    ? (marketDetection?.indices || []).find(i => i.symbol === '^GSPC' || i.name?.includes('S&P 500'))
+    : (marketDetection?.indices || []).find(i => i.symbol === '^NSEI' || i.name?.includes('NIFTY 50'));
 
   const benchmarkName = marketRegion === 'US' ? 'S&P 500 & Wall St' : 'NSE NIFTY 50';
+  const benchmarkPrice = benchmarkIdx?.price
+    ? `${currency}${Number(benchmarkIdx.price).toLocaleString(marketRegion === 'US' ? 'en-US' : 'en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : (marketRegion === 'US' ? '$5,864.67' : '₹22,794.95');
   const benchmarkChange = benchmarkIdx?.changePct || (marketRegion === 'US' ? '+0.22%' : '-1.49%');
   const advances = marketDetection?.breadth?.advances || marketDetection?.marketBreadth?.advances || (marketRegion === 'US' ? 7 : 1);
   const declines = marketDetection?.breadth?.declines || marketDetection?.marketBreadth?.declines || (marketRegion === 'US' ? 3 : 14);
