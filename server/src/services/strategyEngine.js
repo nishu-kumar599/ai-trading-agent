@@ -321,7 +321,7 @@ async function getMarketUniverse(horizon = 'INTRADAY') {
 }
 
 // Execute a paper trade with Profit-Lock Guard
-function executeTrade({ symbol, horizon, direction, price, quantity, optionDetails = null, liveSpot = null }) {
+function executeTrade({ symbol, horizon, direction, price, quantity, optionDetails = null, liveSpot = null, userId = 'usr_demo_trader_001' }) {
   const { getMarketSessionInfo } = require('./realMarketService');
   const session = getMarketSessionInfo();
   const isFO = horizon === 'F_AND_O';
@@ -339,8 +339,11 @@ function executeTrade({ symbol, horizon, direction, price, quantity, optionDetai
     target2 = entryPrice * 2.00;
   }
 
+  const effectiveUserId = userId || 'usr_demo_trader_001';
+
   const newPosition = {
     id: `pos_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+    userId: effectiveUserId,
     symbol: isFO && optionDetails && optionDetails.recommendedStrike && !symbol.includes(optionDetails.recommendedStrike)
       ? `${symbol} ${optionDetails.recommendedStrike}`
       : symbol,
@@ -363,13 +366,13 @@ function executeTrade({ symbol, horizon, direction, price, quantity, optionDetai
   };
 
   activePositions.unshift(newPosition);
-  saveActivePositions(activePositions, 'IN');
+  saveActivePositions(activePositions, 'IN', effectiveUserId);
   return newPosition;
 }
 
 // Simulate price movement and trigger Profit-Lock Breakeven / Trailing Stop
-function tickPosition(id, newPrice) {
-  const posIndex = activePositions.findIndex(p => p.id === id);
+function tickPosition(id, newPrice, userId = null) {
+  const posIndex = activePositions.findIndex(p => p.id === id && (!userId || !p.userId || p.userId === userId));
   if (posIndex === -1) return null;
 
   const pos = activePositions[posIndex];
@@ -431,8 +434,8 @@ function tickPosition(id, newPrice) {
     // Move to history
     tradeHistory.unshift(closed);
     activePositions.splice(posIndex, 1);
-    saveTrade(closed, 'IN');
-    saveActivePositions(activePositions, 'IN');
+    saveTrade(closed, 'IN', closed.userId || userId);
+    saveActivePositions(activePositions, 'IN', closed.userId || userId);
 
     // AI Self-Learning feedback
     try {
@@ -444,8 +447,8 @@ function tickPosition(id, newPrice) {
   return pos;
 }
 
-function closePosition(id) {
-  const posIndex = activePositions.findIndex(p => p.id === id);
+function closePosition(id, userId = null) {
+  const posIndex = activePositions.findIndex(p => p.id === id && (!userId || !p.userId || p.userId === userId));
   if (posIndex === -1) return null;
 
   const [pos] = activePositions.splice(posIndex, 1);
@@ -468,8 +471,8 @@ function closePosition(id) {
     closedAt: new Date().toISOString()
   };
   tradeHistory.unshift(closed);
-  saveTrade(closed, 'IN');
-  saveActivePositions(activePositions, 'IN');
+  saveTrade(closed, 'IN', closed.userId || userId);
+  saveActivePositions(activePositions, 'IN', closed.userId || userId);
 
   // AI Self-Learning feedback
   try {
@@ -480,10 +483,16 @@ function closePosition(id) {
   return closed;
 }
 
-function resetTestSandbox() {
-  activePositions = [];
-  tradeHistory = [];
-  saveActivePositions([], 'IN');
+function resetTestSandbox(userId = null) {
+  if (userId) {
+    activePositions = activePositions.filter(p => p.userId && p.userId !== userId);
+    tradeHistory = tradeHistory.filter(t => t.userId && t.userId !== userId);
+    saveActivePositions(activePositions, 'IN', userId);
+  } else {
+    activePositions = [];
+    tradeHistory = [];
+    saveActivePositions([], 'IN');
+  }
   return { success: true, activePositions, tradeHistory, balance: 100000 };
 }
 
@@ -583,29 +592,44 @@ module.exports = {
   tickPosition,
   closePosition,
   resetTestSandbox,
-  getActivePositions: (quotes) => {
-    const manualPositions = updateAndGetActivePositions(quotes);
+  getActivePositions: (quotes, userId = null) => {
+    const allManual = updateAndGetActivePositions(quotes);
+    const manualPositions = userId
+      ? allManual.filter(p => !p.userId || p.userId === userId)
+      : allManual;
     try {
       const { getActivePositions: getAiPositions } = require('./aiAgentEngine');
       const aiPositions = getAiPositions() || [];
       const map = new Map();
       manualPositions.forEach(p => map.set(p.id, p));
-      aiPositions.forEach(p => map.set(p.id, p));
+      aiPositions.forEach(p => {
+        if (!userId || !p.userId || p.userId === userId) {
+          map.set(p.id, p);
+        }
+      });
       return Array.from(map.values());
     } catch (e) {
       return manualPositions;
     }
   },
-  getTradeHistory: () => {
+  getTradeHistory: (userId = null) => {
     try {
       const { getTradeHistory: getAiHistory } = require('./aiAgentEngine');
       const aiHistory = getAiHistory() || [];
       const map = new Map();
-      tradeHistory.forEach(t => map.set(t.id, t));
-      aiHistory.forEach(t => map.set(t.id, t));
+      tradeHistory.forEach(t => {
+        if (!userId || !t.userId || t.userId === userId) {
+          map.set(t.id, t);
+        }
+      });
+      aiHistory.forEach(t => {
+        if (!userId || !t.userId || t.userId === userId) {
+          map.set(t.id, t);
+        }
+      });
       return Array.from(map.values());
     } catch (e) {
-      return tradeHistory;
+      return userId ? tradeHistory.filter(t => !t.userId || t.userId === userId) : tradeHistory;
     }
   }
 };

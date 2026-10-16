@@ -27,7 +27,6 @@ export const ForgotPassword = ({ onSwitchToLogin }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [localError, setLocalError] = useState('');
   const [successNotice, setSuccessNotice] = useState('');
-  const [serverResetCode, setServerResetCode] = useState('');
 
   // Password strength calculation
   const calculateStrength = (pwd) => {
@@ -61,11 +60,7 @@ export const ForgotPassword = ({ onSwitchToLogin }) => {
     setIsSubmitting(true);
     try {
       const data = await forgotPassword(email.trim());
-      setSuccessNotice(data.message || 'Verification code generated!');
-      if (data.resetCode) {
-        setServerResetCode(data.resetCode);
-        setCode(data.resetCode); // Pre-fill for seamless user experience
-      }
+      setSuccessNotice(data.message || 'If an account exists, a 6-digit verification code has been dispatched.');
       setStep(2);
     } catch (err) {
       setLocalError(err.message || 'Failed to request reset code.');
@@ -262,45 +257,6 @@ export const ForgotPassword = ({ onSwitchToLogin }) => {
           ) : (
             /* STEP 2: Enter Verification Code & New Password */
             <form onSubmit={handleResetPassword}>
-              {serverResetCode && (
-                <div style={{
-                  background: 'rgba(16, 185, 129, 0.1)',
-                  border: '1px solid rgba(16, 185, 129, 0.35)',
-                  padding: '12px 14px',
-                  borderRadius: '10px',
-                  marginBottom: '16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '10px'
-                }}>
-                  <div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
-                      Generated Reset OTP
-                    </div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--accent-emerald)', letterSpacing: '2px' }}>
-                      {serverResetCode}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setCode(serverResetCode)}
-                    style={{
-                      background: 'rgba(16, 185, 129, 0.2)',
-                      border: '1px solid rgba(16, 185, 129, 0.4)',
-                      color: 'var(--accent-emerald)',
-                      padding: '6px 12px',
-                      borderRadius: '6px',
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Auto-Fill Code
-                  </button>
-                </div>
-              )}
-
               <div className="form-group">
                 <label className="form-label" htmlFor="reset-code">6-Digit Verification Code</label>
                 <div className="input-container">

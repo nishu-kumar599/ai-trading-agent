@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { authFetch } from '../utils/authFetch';
 import { 
   Bot, 
   Play, 
@@ -61,9 +62,8 @@ export const AutoPilotCockpit = () => {
   const handleToggleAutoPilot = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/ai-agent/toggle', {
+      const res = await authFetch('/api/ai-agent/toggle', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ market: marketRegion })
       });
       const data = await res.json();
@@ -83,9 +83,8 @@ export const AutoPilotCockpit = () => {
     setTriggeringScan(true);
     setActionNotice(`Running autonomous ${marketRegion === 'US' ? 'US (Wall Street)' : 'multi-segment'} market scan & probability ranking...`);
     try {
-      const res = await fetch('/api/ai-agent/trigger-scan', {
+      const res = await authFetch('/api/ai-agent/trigger-scan', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ market: marketRegion })
       });
       const data = await res.json();
@@ -115,9 +114,8 @@ export const AutoPilotCockpit = () => {
 
     setIsPanicking(true);
     try {
-      const res = await fetch('/api/ai-agent/panic-exit-all', {
+      const res = await authFetch('/api/ai-agent/panic-exit-all', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ market: marketRegion })
       });
       const data = await res.json();
@@ -136,9 +134,8 @@ export const AutoPilotCockpit = () => {
   // Risk Profile Switcher
   const handleSetRiskProfile = async (profile) => {
     try {
-      const res = await fetch('/api/ai-agent/risk-profile', {
+      const res = await authFetch('/api/ai-agent/risk-profile', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ profile, market: marketRegion })
       });
       const data = await res.json();
@@ -148,6 +145,7 @@ export const AutoPilotCockpit = () => {
       }
     } catch (err) {
       setActionNotice('Failed to update risk profile: ' + err.message);
+
     } finally {
       setTimeout(() => setActionNotice(''), 4000);
     }
@@ -215,9 +213,8 @@ export const AutoPilotCockpit = () => {
     const defaultCap = marketRegion === 'US' ? '$25,000' : '₹100,000';
     if (!window.confirm(`Reset Autonomous AI Agent state, capital to ${defaultCap}, and clear trade logs?`)) return;
     try {
-      const res = await fetch('/api/ai-agent/reset-state', {
+      const res = await authFetch('/api/ai-agent/reset-state', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ market: marketRegion })
       });
       const data = await res.json();
@@ -228,6 +225,7 @@ export const AutoPilotCockpit = () => {
     } catch (err) {
       setActionNotice('Reset failed: ' + err.message);
     } finally {
+
       setTimeout(() => setActionNotice(''), 4000);
     }
   };

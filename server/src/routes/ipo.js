@@ -6,8 +6,10 @@ const {
   getUserBids,
   simulateListingDay
 } = require('../services/ipoEngine');
+const { authenticateToken, optionalAuthenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
+
 
 // GET /api/ipo/list?status=ALL&category=ALL&search=&market=IN|US
 router.get('/list', async (req, res) => {
@@ -40,13 +42,13 @@ router.get('/:id/details', async (req, res) => {
 });
 
 // POST /api/ipo/bid
-router.post('/bid', async (req, res) => {
+router.post('/bid', authenticateToken, async (req, res) => {
   try {
     const { ipoId, lots, category, upiId, market } = req.body;
     if (!ipoId) {
       return res.status(400).json({ success: false, error: 'ipoId is required' });
     }
-    const result = await submitPaperBid({ ipoId, lots, category, upiId, market });
+    const result = await submitPaperBid({ ipoId, lots, category, upiId, market, userId: req.user.id });
     res.json(result);
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
@@ -54,7 +56,7 @@ router.post('/bid', async (req, res) => {
 });
 
 // GET /api/ipo/my-bids?market=IN|US
-router.get('/my-bids', (req, res) => {
+router.get('/my-bids', optionalAuthenticateToken, (req, res) => {
   try {
     const bids = getUserBids(req.query.market);
     res.json({
@@ -69,7 +71,7 @@ router.get('/my-bids', (req, res) => {
 });
 
 // POST /api/ipo/bid/:bidId/simulate-listing
-router.post('/bid/:bidId/simulate-listing', (req, res) => {
+router.post('/bid/:bidId/simulate-listing', authenticateToken, (req, res) => {
   try {
     const result = simulateListingDay(req.params.bidId);
     res.json(result);
@@ -79,3 +81,4 @@ router.post('/bid/:bidId/simulate-listing', (req, res) => {
 });
 
 module.exports = router;
+

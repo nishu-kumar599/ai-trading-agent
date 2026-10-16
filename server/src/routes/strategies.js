@@ -14,24 +14,29 @@ const {
   executeUSTrade,
   tickUSPosition,
   closeUSPosition,
+  resetUSTestSandbox,
   getUSActivePositions,
   getUSTradeHistory
 } = require('../services/usStrategyEngine');
 const { getUSMarketSessionInfo, getUSRealQuotes } = require('../services/usMarketService');
 const { runTodayMarketAudit } = require('../services/todayAuditEngine');
 const { getMonthPLData } = require('../services/calendarEngine');
+const { authenticateToken, optionalAuthenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
 // POST /api/strategies/reset-test
-router.post('/reset-test', (req, res) => {
-  const result = resetTestSandbox();
+router.post('/reset-test', authenticateToken, (req, res) => {
+  const userId = req.user.id;
+  const result = resetTestSandbox(userId);
+  resetUSTestSandbox(userId);
   res.json({
     success: true,
     message: 'Test sandbox reset to initial state with ₹100,000 virtual capital.',
     result
   });
 });
+
 
 // GET /api/strategies/calendar?market=IN|US
 router.get('/calendar', (req, res) => {
@@ -128,8 +133,9 @@ router.get('/scan', async (req, res) => {
 });
 
 // GET /api/strategies/positions?market=IN|US
-router.get('/positions', async (req, res) => {
+router.get('/positions', optionalAuthenticateToken, async (req, res) => {
   const market = (req.query.market || 'IN').toUpperCase();
+  const userId = req.user ? req.user.id : null;
 
   if (market === 'US') {
     let quotes = null;
@@ -145,8 +151,8 @@ router.get('/positions', async (req, res) => {
       isMarketOpen: session.isOpen,
       marketStatus: session.status,
       nextSessionMessage: session.nextSessionMessage,
-      activePositions: getUSActivePositions(quotes),
-      tradeHistory: getUSTradeHistory()
+      activePositions: getUSActivePositions(quotes, userId),
+      tradeHistory: getUSTradeHistory(userId)
     });
   }
 
@@ -165,23 +171,58 @@ router.get('/positions', async (req, res) => {
     isMarketOpen: session.isOpen,
     marketStatus: session.status,
     nextSessionMessage: session.nextSessionMessage,
-    activePositions: getActivePositions(quotes),
-    tradeHistory: getTradeHistory()
+    activePositions: getActivePositions(quotes, userId),
+    tradeHistory: getTradeHistory(userId)
   });
 });
 
 // POST /api/strategies/execute
-router.post('/execute', async (req, res) => {
+router.post('/execute', authenticateToken, async (req, res) => {
   try {
     let { symbol, horizon, direction, price, quantity, optionDetails, market } = req.body;
-    const isUS = (market || '').toUpperCase() === 'US' || (symbol && !symbol.includes('.NS') && !['NIFTY', 'BANKNIFTY', 'RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK', 'SBIN', 'BHARTIARTL', 'TATAMOTORS', 'ITC'].includes(symbol.toUpperCase()));
+    const userId = req.user.id;
 
-    if (!symbol || !direction) {
+    if (!symbol || typeof symbol !== 'string' || symbol.trim().length === 0 || symbol.length > 50) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required trade execution parameters (symbol, direction).'
+        message: 'Invalid or missing stock symbol.'
       });
     }
+
+    const VALID_DIRECTIONS = ['BUY', 'SELL', 'BUY_CALL', 'BUY_PUT'];
+    const normalizedDirection = (direction || '').toUpperCase().trim();
+    if (!VALID_DIRECTIONS.includes(normalizedDirection)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid trade direction '${direction}'. Allowed: ${VALID_DIRECTIONS.join(', ')}`
+      });
+    }
+
+    const VALID_HORIZONS = ['INTRADAY', 'SHORT_TERM', 'MEDIUM_TERM', 'LONG_TERM', 'F_AND_O'];
+    const normalizedHorizon = (horizon || 'INTRADAY').toUpperCase().trim();
+    if (!VALID_HORIZONS.includes(normalizedHorizon)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid trading horizon '${horizon}'. Allowed: ${VALID_HORIZONS.join(', ')}`
+      });
+    }
+
+    const parsedQty = parseInt(quantity, 10);
+    if (!Number.isInteger(parsedQty) || parsedQty <= 0 || parsedQty > 500000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Trade quantity must be a positive integer between 1 and 500,000.'
+      });
+    }
+
+    if (price !== undefined && price !== null && (isNaN(Number(price)) || Number(price) <= 0)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Execution price must be a positive number greater than 0.'
+      });
+    }
+
+    const isUS = (market || '').toUpperCase() === 'US' || (symbol && !symbol.includes('.NS') && !['NIFTY', 'BANKNIFTY', 'RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK', 'SBIN', 'BHARTIARTL', 'TATAMOTORS', 'ITC'].includes(symbol.toUpperCase()));
 
     if (isUS) {
       let liveSpot = parseFloat(price) || 0;
@@ -190,7 +231,7 @@ router.post('/execute', async (req, res) => {
         const match = quotes.stocks.find(s => s.symbol.toUpperCase() === symbol.toUpperCase());
         if (match && match.price) {
           liveSpot = match.price;
-          if (!price || horizon !== 'F_AND_O') price = match.price;
+          if (!price || normalizedHorizon !== 'F_AND_O') price = match.price;
         }
       } catch (e) {}
 
@@ -198,17 +239,18 @@ router.post('/execute', async (req, res) => {
 
       const trade = executeUSTrade({
         symbol,
-        horizon: horizon || 'INTRADAY',
-        direction,
+        horizon: normalizedHorizon,
+        direction: normalizedDirection,
         price: parseFloat(price),
-        quantity: parseInt(quantity) || 10,
+        quantity: parsedQty,
         optionDetails,
-        liveSpot
+        liveSpot,
+        userId
       });
 
       const executionMsg = trade.isAMO
         ? `US After-Market Order (AMO) placed at official closing ($${trade.entryPrice}). Live order tracking will activate when Wall Street opens at 09:30 AM EST.`
-        : `Live US Paper Order Executed at Real Market Price ($${trade.entryPrice}) with Zero-Loss Guard!`;
+        : `Live US Paper Order Executed at Real Market Price ($${trade.entryPrice}) with Breakeven Risk Guard!`;
 
       return res.status(201).json({
         success: true,
@@ -230,7 +272,7 @@ router.post('/execute', async (req, res) => {
                  || (quotes.indices || []).find(i => i.symbol.toUpperCase() === cleanSym || i.name.toUpperCase() === cleanSym);
       if (match && match.price) {
         liveSpot = match.price;
-        if (!price || horizon !== 'F_AND_O') {
+        if (!price || normalizedHorizon !== 'F_AND_O') {
           price = match.price;
         }
       }
@@ -242,17 +284,18 @@ router.post('/execute', async (req, res) => {
 
     const trade = executeTrade({
       symbol,
-      horizon: horizon || 'INTRADAY',
-      direction,
+      horizon: normalizedHorizon,
+      direction: normalizedDirection,
       price: parseFloat(price),
-      quantity: parseInt(quantity) || 50,
+      quantity: parsedQty,
       optionDetails,
-      liveSpot
+      liveSpot,
+      userId
     });
 
     const executionMsg = trade.isAMO
       ? `After-Market Order (AMO) placed at official closing settlement (₹${trade.entryPrice}). Live order tracking will activate when exchange opens at 09:15 AM IST.`
-      : `Live Paper Order Executed at Real Market Price (₹${trade.entryPrice}) with Zero-Loss Guard!`;
+      : `Live Paper Order Executed at Real Market Price (₹${trade.entryPrice}) with Breakeven Risk Guard!`;
 
     res.status(201).json({
       success: true,
@@ -272,19 +315,21 @@ router.post('/execute', async (req, res) => {
 });
 
 // POST /api/strategies/positions/:id/tick
-router.post('/positions/:id/tick', (req, res) => {
+router.post('/positions/:id/tick', authenticateToken, (req, res) => {
   const { newPrice } = req.body;
   const id = req.params.id;
-  if (!newPrice) {
-    return res.status(400).json({ success: false, message: 'newPrice is required' });
+  const userId = req.user.id;
+
+  if (!newPrice || isNaN(Number(newPrice)) || Number(newPrice) <= 0) {
+    return res.status(400).json({ success: false, message: 'newPrice must be a positive number' });
   }
 
   const result = id.startsWith('us_')
-    ? tickUSPosition(id, parseFloat(newPrice))
-    : tickPosition(id, parseFloat(newPrice));
+    ? tickUSPosition(id, parseFloat(newPrice), userId)
+    : tickPosition(id, parseFloat(newPrice), userId);
 
   if (!result) {
-    return res.status(404).json({ success: false, message: 'Position not found' });
+    return res.status(404).json({ success: false, message: 'Position not found or unauthorized' });
   }
 
   res.json({
@@ -294,14 +339,16 @@ router.post('/positions/:id/tick', (req, res) => {
 });
 
 // POST /api/strategies/positions/:id/close
-router.post('/positions/:id/close', (req, res) => {
+router.post('/positions/:id/close', authenticateToken, (req, res) => {
   const id = req.params.id;
+  const userId = req.user.id;
+
   const closed = id.startsWith('us_')
-    ? closeUSPosition(id)
-    : closePosition(id);
+    ? closeUSPosition(id, userId)
+    : closePosition(id, userId);
 
   if (!closed) {
-    return res.status(404).json({ success: false, message: 'Position not found' });
+    return res.status(404).json({ success: false, message: 'Position not found or unauthorized' });
   }
 
   res.json({
@@ -312,3 +359,4 @@ router.post('/positions/:id/close', (req, res) => {
 });
 
 module.exports = router;
+

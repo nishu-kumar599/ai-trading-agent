@@ -6,8 +6,10 @@ const {
   addNewsAndAnalyze,
   executeNewsTrade
 } = require('../services/sentimentEngine');
+const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
+
 
 // GET /api/sentiment/market
 router.get('/market', async (req, res) => {
@@ -51,7 +53,7 @@ router.post('/analyze', (req, res) => {
 });
 
 // POST /api/sentiment/publish-news
-router.post('/publish-news', (req, res) => {
+router.post('/publish-news', authenticateToken, (req, res) => {
   const { headline, source, symbol } = req.body;
   if (!headline) {
     return res.status(400).json({ success: false, message: 'Headline is required.' });
@@ -65,21 +67,28 @@ router.post('/publish-news', (req, res) => {
 });
 
 // POST /api/sentiment/trade
-router.post('/trade', async (req, res) => {
+router.post('/trade', authenticateToken, async (req, res) => {
   try {
     const { newsId, horizon, quantity } = req.body;
+    const userId = req.user.id;
+
     if (!newsId) {
       return res.status(400).json({ success: false, message: 'newsId is required.' });
     }
 
-    const result = await executeNewsTrade(newsId, horizon || 'INTRADAY', parseInt(quantity) || 50);
+    const parsedQty = parseInt(quantity, 10);
+    if (quantity && (!Number.isInteger(parsedQty) || parsedQty <= 0)) {
+      return res.status(400).json({ success: false, message: 'Quantity must be a positive integer.' });
+    }
+
+    const result = await executeNewsTrade(newsId, horizon || 'INTRADAY', parsedQty || 50, userId);
     if (!result) {
       return res.status(404).json({ success: false, message: 'News item not found.' });
     }
 
     const message = result.trade.isAMO
       ? `After-Market Order (AMO) placed on ${result.trade.symbol} (${result.trade.direction}) at official closing settlement (₹${result.trade.entryPrice}). Live order tracking activates at 09:15 AM IST.`
-      : `News-driven trade executed successfully! ${result.trade.symbol} (${result.trade.direction}) with Profit-Lock Guard.`;
+      : `News-driven trade executed successfully! ${result.trade.symbol} (${result.trade.direction}) with Breakeven Risk Guard.`;
 
     res.json({
       success: true,
@@ -95,5 +104,6 @@ router.post('/trade', async (req, res) => {
     });
   }
 });
+
 
 module.exports = router;

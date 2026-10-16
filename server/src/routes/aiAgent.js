@@ -19,8 +19,10 @@ const {
 } = require('../services/usAiAgentEngine');
 const { getLearningStats } = require('../services/aiLearningEngine');
 const { getNotifications, clearNotifications } = require('../services/notificationService');
+const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
+
 
 // GET /api/ai-agent/status?market=IN|US
 router.get('/status', (req, res) => {
@@ -121,7 +123,7 @@ router.get('/notifications', (req, res) => {
 });
 
 // POST /api/ai-agent/panic-exit-all (1-Click Emergency Panic Square-off)
-router.post('/panic-exit-all', async (req, res) => {
+router.post('/panic-exit-all', authenticateToken, async (req, res) => {
   try {
     const market = (req.body.market || req.query.market || 'IN').toUpperCase();
     if (market === 'US') {
@@ -153,7 +155,7 @@ router.post('/panic-exit-all', async (req, res) => {
 });
 
 // POST /api/ai-agent/risk-profile (Conservative, Balanced, Aggressive)
-router.post('/risk-profile', (req, res) => {
+router.post('/risk-profile', authenticateToken, (req, res) => {
   try {
     const { profile } = req.body;
     const result = setRiskProfile(profile);
@@ -170,7 +172,7 @@ router.post('/risk-profile', (req, res) => {
 });
 
 // POST /api/ai-agent/toggle
-router.post('/toggle', (req, res) => {
+router.post('/toggle', authenticateToken, (req, res) => {
   try {
     const market = (req.body.market || req.query.market || 'IN').toUpperCase();
     if (market === 'US') {
@@ -197,7 +199,7 @@ router.post('/toggle', (req, res) => {
 });
 
 // POST /api/ai-agent/trigger-scan
-router.post('/trigger-scan', async (req, res) => {
+router.post('/trigger-scan', authenticateToken, async (req, res) => {
   try {
     const market = (req.body.market || req.query.market || 'IN').toUpperCase();
     if (market === 'US') {
@@ -225,7 +227,7 @@ router.post('/trigger-scan', async (req, res) => {
 });
 
 // POST /api/ai-agent/reset-state
-router.post('/reset-state', async (req, res) => {
+router.post('/reset-state', authenticateToken, async (req, res) => {
   try {
     const market = (req.body.market || req.query.market || 'IN').toUpperCase();
     if (market === 'US') {

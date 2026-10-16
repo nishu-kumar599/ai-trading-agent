@@ -6,11 +6,15 @@ async function connectDB() {
   const uri = process.env.MONGODB_URI;
 
   if (!uri) {
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('⚠️  [Production Warning] MONGODB_URI not configured in production! Ephemeral container files will be cleared on redeploys. Configure MONGODB_URI to retain live user state.');
+    }
     console.log('📦 [Database] MONGODB_URI not provided. Running in Local Storage Mode (server/data/*.json).');
     console.log('ℹ️  [Database] To persist permanently in cloud MongoDB, set MONGODB_URI in .env or Render environment variables.');
     isConnected = false;
     return false;
   }
+
 
   try {
     await mongoose.connect(uri, {

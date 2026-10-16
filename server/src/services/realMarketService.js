@@ -12,8 +12,7 @@ const { execFile } = require('child_process');
 const path = require('path');
 
 const SCRIPT_PATH = path.join(__dirname, 'fetch_real_market.py');
-const PYTHON_PATH = '/usr/bin/python3';
-const SITE_PACKAGES = '/Users/tarunpal745gmail.com/Library/Python/3.9/lib/python/site-packages';
+const PYTHON_PATH = process.env.PYTHON_PATH || 'python3';
 
 let marketCache = {
   indices: [],
@@ -28,10 +27,11 @@ let pendingPromise = null;
 
 // Initial fallback dataset in case network is completely unreachable
 const FALLBACK_INDICES = [
-  { symbol: '^NSEI', name: 'NIFTY 50', category: 'INDEX', price: 22794.00, prevClose: 23140.50, changeValue: -346.50, changePct: '-1.50%', isPositive: false, dayHigh: 23080.25, dayLow: 22762.20, fiftyTwoWeekHigh: 24774.30, rsi: 27.9, isRealMarket: true },
-  { symbol: '^BSESN', name: 'SENSEX', category: 'INDEX', price: 72812.79, prevClose: 73895.00, changeValue: -1082.21, changePct: '-1.46%', isPositive: false, dayHigh: 73740.10, dayLow: 72710.00, fiftyTwoWeekHigh: 85978.25, rsi: 28.4, isRealMarket: true },
-  { symbol: '^NSEBANK', name: 'BANK NIFTY', category: 'INDEX', price: 54489.70, prevClose: 56215.55, changeValue: -1725.85, changePct: '-3.07%', isPositive: false, dayHigh: 55800.00, dayLow: 54400.00, fiftyTwoWeekHigh: 56215.55, rsi: 34.2, isRealMarket: true }
+  { symbol: '^NSEI', name: 'NIFTY 50', category: 'INDEX', price: 22794.00, prevClose: 23140.50, changeValue: -346.50, changePct: '-1.50%', isPositive: false, dayHigh: 23080.25, dayLow: 22762.20, fiftyTwoWeekHigh: 24774.30, rsi: 27.9, isRealMarket: false, isFallback: true, dataStatus: 'FALLBACK_SIMULATION' },
+  { symbol: '^BSESN', name: 'SENSEX', category: 'INDEX', price: 72812.79, prevClose: 73895.00, changeValue: -1082.21, changePct: '-1.46%', isPositive: false, dayHigh: 73740.10, dayLow: 72710.00, fiftyTwoWeekHigh: 85978.25, rsi: 28.4, isRealMarket: false, isFallback: true, dataStatus: 'FALLBACK_SIMULATION' },
+  { symbol: '^NSEBANK', name: 'BANK NIFTY', category: 'INDEX', price: 54489.70, prevClose: 56215.55, changeValue: -1725.85, changePct: '-3.07%', isPositive: false, dayHigh: 55800.00, dayLow: 54400.00, fiftyTwoWeekHigh: 56215.55, rsi: 34.2, isRealMarket: false, isFallback: true, dataStatus: 'FALLBACK_SIMULATION' }
 ];
+
 
 const FALLBACK_STOCKS = [
   {
@@ -62,7 +62,9 @@ const FALLBACK_STOCKS = [
     strikePrice: 1200,
     optPremium: 31.15,
     lotSize: 250,
-    isRealMarket: true
+    isRealMarket: false,
+    isFallback: true,
+    dataStatus: 'FALLBACK_SIMULATION'
   },
   {
     symbol: 'TCS.NS',
@@ -92,7 +94,9 @@ const FALLBACK_STOCKS = [
     strikePrice: 2080,
     optPremium: 52.00,
     lotSize: 175,
-    isRealMarket: true
+    isRealMarket: false,
+    isFallback: true,
+    dataStatus: 'FALLBACK_SIMULATION'
   },
   {
     symbol: 'HDFCBANK.NS',
@@ -122,7 +126,9 @@ const FALLBACK_STOCKS = [
     strikePrice: 720,
     optPremium: 18.70,
     lotSize: 550,
-    isRealMarket: true
+    isRealMarket: false,
+    isFallback: true,
+    dataStatus: 'FALLBACK_SIMULATION'
   },
   {
     symbol: 'M&M.NS',
@@ -152,7 +158,9 @@ const FALLBACK_STOCKS = [
     strikePrice: 3000,
     optPremium: 78.00,
     lotSize: 350,
-    isRealMarket: true
+    isRealMarket: false,
+    isFallback: true,
+    dataStatus: 'FALLBACK_SIMULATION'
   },
   {
     symbol: 'INFY.NS',
@@ -182,7 +190,9 @@ const FALLBACK_STOCKS = [
     strikePrice: 1540,
     optPremium: 38.50,
     lotSize: 400,
-    isRealMarket: true
+    isRealMarket: false,
+    isFallback: true,
+    dataStatus: 'FALLBACK_SIMULATION'
   }
 ];
 
@@ -192,9 +202,9 @@ const FALLBACK_STOCKS = [
 function runPythonMarketScanner() {
   return new Promise((resolve, reject) => {
     const env = {
-      ...process.env,
-      PYTHONPATH: SITE_PACKAGES
+      ...process.env
     };
+
 
     execFile(
       PYTHON_PATH,
@@ -478,7 +488,11 @@ async function getRealQuotes() {
     })),
     lastSynced: session.istTimeString,
     tickTimestamp: Date.now(),
-    isLive: session.isOpen
+    isLive: session.isOpen,
+    syncStatus: marketCache.syncStatus,
+    isRealMarket: marketCache.syncStatus === 'SUCCESS',
+    isFallback: marketCache.syncStatus !== 'SUCCESS',
+    dataStatus: marketCache.syncStatus === 'SUCCESS' ? 'REAL_MARKET' : 'FALLBACK_SIMULATION'
   };
 }
 
@@ -517,7 +531,9 @@ async function getRealMarketDetection() {
     lastSynced: session.istTimeString,
     tickTimestamp: Date.now(),
     syncStatus: marketCache.syncStatus,
-    isRealMarket: true
+    isRealMarket: marketCache.syncStatus === 'SUCCESS',
+    isFallback: marketCache.syncStatus !== 'SUCCESS',
+    dataStatus: marketCache.syncStatus === 'SUCCESS' ? 'REAL_MARKET' : 'FALLBACK_SIMULATION'
   };
 }
 

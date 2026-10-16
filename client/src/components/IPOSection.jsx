@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { authFetch } from '../utils/authFetch';
 import { 
   Rocket, 
   TrendingUp, 
@@ -67,7 +68,7 @@ export const IPOSection = ({ onExecutePaperTrade }) => {
 
   const fetchMyBids = async () => {
     try {
-      const res = await fetch(`/api/ipo/my-bids?market=${marketRegion}`);
+      const res = await authFetch(`/api/ipo/my-bids?market=${marketRegion}`);
       const text = await res.text();
       const data = text ? JSON.parse(text) : null;
       if (data && data.success) {
@@ -89,14 +90,14 @@ export const IPOSection = ({ onExecutePaperTrade }) => {
     if (!selectedIpoForBid) return;
     try {
       setBidSubmitting(true);
-      const res = await fetch('/api/ipo/bid', {
+      const res = await authFetch('/api/ipo/bid', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ipoId: selectedIpoForBid.id,
           lots: bidLots,
           category: 'RETAIL',
-          upiId
+          upiId,
+          market: marketRegion
         })
       });
       const text = await res.text();
@@ -127,9 +128,10 @@ export const IPOSection = ({ onExecutePaperTrade }) => {
 
   const handleSimulateListing = async (bidId) => {
     try {
-      const res = await fetch(`/api/ipo/bid/${bidId}/simulate-listing`, {
+      const res = await authFetch(`/api/ipo/bid/${bidId}/simulate-listing`, {
         method: 'POST'
       });
+
       const text = await res.text();
       const data = text ? JSON.parse(text) : null;
       if (data && data.success) {

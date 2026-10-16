@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { authFetch } from '../utils/authFetch';
 import { 
   Newspaper, 
   TrendingUp, 
@@ -95,9 +96,8 @@ export const NewsSentimentTrader = () => {
     if (!customText.trim()) return;
 
     try {
-      const res = await fetch('/api/sentiment/publish-news', {
+      const res = await authFetch('/api/sentiment/publish-news', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           headline: customText.trim(),
           source: 'User Analyst Feed',
@@ -124,9 +124,8 @@ export const NewsSentimentTrader = () => {
     setTradeNotice('');
 
     try {
-      const res = await fetch('/api/sentiment/trade', {
+      const res = await authFetch('/api/sentiment/trade', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ newsId, horizon: tradeHorizon, quantity: 50 })
       });
       const text = await res.text();
@@ -143,6 +142,7 @@ export const NewsSentimentTrader = () => {
     } finally {
       setExecutingTradeId(null);
     }
+
   };
 
   const sampleHeadlines = marketRegion === 'US' ? [

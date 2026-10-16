@@ -77,7 +77,7 @@ const US_STRATEGY_CATALOG = {
   }
 };
 
-function executeUSTrade({ symbol, horizon, direction, price, quantity, optionDetails = null, liveSpot = null }) {
+function executeUSTrade({ symbol, horizon, direction, price, quantity, optionDetails = null, liveSpot = null, userId = 'usr_demo_trader_001' }) {
   const session = getUSMarketSessionInfo();
   const isFO = horizon === 'F_AND_O';
   const entryPrice = isFO && optionDetails ? optionDetails.premium : price;
@@ -94,8 +94,11 @@ function executeUSTrade({ symbol, horizon, direction, price, quantity, optionDet
     target2 = entryPrice * 2.00;
   }
 
+  const effectiveUserId = userId || 'usr_demo_trader_001';
+
   const newPosition = {
     id: `us_pos_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+    userId: effectiveUserId,
     market: 'US',
     currency: '$',
     symbol: isFO && optionDetails && optionDetails.recommendedStrike && !symbol.includes(optionDetails.recommendedStrike)
@@ -120,12 +123,12 @@ function executeUSTrade({ symbol, horizon, direction, price, quantity, optionDet
   };
 
   activePositions.unshift(newPosition);
-  saveActivePositions(activePositions, 'US');
+  saveActivePositions(activePositions, 'US', effectiveUserId);
   return newPosition;
 }
 
-function tickUSPosition(id, newPrice) {
-  const posIndex = activePositions.findIndex(p => p.id === id);
+function tickUSPosition(id, newPrice, userId = null) {
+  const posIndex = activePositions.findIndex(p => p.id === id && (!userId || !p.userId || p.userId === userId));
   if (posIndex === -1) return null;
 
   const pos = activePositions[posIndex];
@@ -183,15 +186,15 @@ function tickUSPosition(id, newPrice) {
 
     tradeHistory.unshift(closed);
     activePositions.splice(posIndex, 1);
-    saveTrade(closed, 'US');
-    saveActivePositions(activePositions, 'US');
+    saveTrade(closed, 'US', closed.userId || userId);
+    saveActivePositions(activePositions, 'US', closed.userId || userId);
   }
 
   return pos;
 }
 
-function closeUSPosition(id) {
-  const posIndex = activePositions.findIndex(p => p.id === id);
+function closeUSPosition(id, userId = null) {
+  const posIndex = activePositions.findIndex(p => p.id === id && (!userId || !p.userId || p.userId === userId));
   if (posIndex === -1) return null;
 
   const [pos] = activePositions.splice(posIndex, 1);
@@ -217,8 +220,8 @@ function closeUSPosition(id) {
   };
 
   tradeHistory.unshift(closed);
-  saveTrade(closed, 'US');
-  saveActivePositions(activePositions, 'US');
+  saveTrade(closed, 'US', closed.userId || userId);
+  saveActivePositions(activePositions, 'US', closed.userId || userId);
   return closed;
 }
 
@@ -302,11 +305,31 @@ function updateAndGetUSActivePositions(realQuotes = null) {
   return activePositions;
 }
 
+function resetUSTestSandbox(userId = null) {
+  if (userId) {
+    activePositions = activePositions.filter(p => p.userId && p.userId !== userId);
+    tradeHistory = tradeHistory.filter(t => t.userId && t.userId !== userId);
+    saveActivePositions(activePositions, 'US', userId);
+  } else {
+    activePositions = [];
+    tradeHistory = [];
+    saveActivePositions([], 'US');
+  }
+  return { success: true, activePositions, tradeHistory, balance: 100000 };
+}
+
 module.exports = {
   US_STRATEGY_CATALOG,
   executeUSTrade,
   tickUSPosition,
   closeUSPosition,
-  getUSActivePositions: (quotes) => updateAndGetUSActivePositions(quotes),
-  getUSTradeHistory: () => tradeHistory
+  resetUSTestSandbox,
+  getUSActivePositions: (quotes, userId = null) => {
+    const positions = updateAndGetUSActivePositions(quotes);
+    return userId ? positions.filter(p => !p.userId || p.userId === userId) : positions;
+  },
+  getUSTradeHistory: (userId = null) => {
+    return userId ? tradeHistory.filter(t => !t.userId || t.userId === userId) : tradeHistory;
+  }
 };
+

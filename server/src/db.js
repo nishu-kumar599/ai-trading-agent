@@ -366,9 +366,10 @@ function writePositionsToDisk(positions, market = 'IN') {
   }
 }
 
-async function saveTrade(trade, market = 'IN') {
+async function saveTrade(trade, market = 'IN', userId = null) {
   if (!trade || !trade.id) return null;
   trade.market = trade.market || market;
+  trade.userId = trade.userId || userId || 'usr_demo_trader_001';
 
   // 1. Save to local disk JSON
   const trades = readTradesFromDisk(trade.market);
@@ -386,7 +387,7 @@ async function saveTrade(trade, market = 'IN') {
       const Trade = require('./models/Trade');
       await Trade.findOneAndUpdate(
         { id: trade.id },
-        { ...trade, market: trade.market },
+        { ...trade, market: trade.market, userId: trade.userId },
         { upsert: true, new: true }
       );
     } catch (err) {
@@ -397,13 +398,18 @@ async function saveTrade(trade, market = 'IN') {
   return trade;
 }
 
-async function loadAllTrades(market = 'IN') {
+async function loadAllTrades(market = 'IN', userId = null) {
   let diskTrades = readTradesFromDisk(market);
+  if (userId) {
+    diskTrades = diskTrades.filter(t => t.userId === userId);
+  }
 
   if (isMongoConnected()) {
     try {
       const Trade = require('./models/Trade');
-      const mongoTrades = await Trade.find({ market }).sort({ closedAt: -1, createdAt: -1 }).lean();
+      const query = { market };
+      if (userId) query.userId = userId;
+      const mongoTrades = await Trade.find(query).sort({ closedAt: -1, createdAt: -1 }).lean();
       
       if (mongoTrades && mongoTrades.length > 0) {
         // Merge with disk trades to ensure zero loss
@@ -418,7 +424,7 @@ async function loadAllTrades(market = 'IN') {
       } else if (diskTrades.length > 0) {
         // Seed MongoDB from disk
         for (const t of diskTrades) {
-          await Trade.findOneAndUpdate({ id: t.id }, { ...t, market }, { upsert: true });
+          await Trade.findOneAndUpdate({ id: t.id }, { ...t, market, userId: t.userId || userId || 'usr_demo_trader_001' }, { upsert: true });
         }
       }
     } catch (err) {
@@ -429,20 +435,26 @@ async function loadAllTrades(market = 'IN') {
   return diskTrades;
 }
 
-async function saveActivePositions(positions, market = 'IN') {
-  const safePositions = positions || [];
+async function saveActivePositions(positions, market = 'IN', userId = null) {
+  const safePositions = (positions || []).map(p => ({
+    ...p,
+    userId: p.userId || userId || 'usr_demo_trader_001'
+  }));
   writePositionsToDisk(safePositions, market);
 
   if (isMongoConnected()) {
     try {
       const Position = require('./models/Position');
+      const deleteQuery = { market };
+      if (userId) deleteQuery.userId = userId;
       // Sync positions: delete stale and upsert active
       const activeIds = safePositions.map(p => p.id);
-      await Position.deleteMany({ market, id: { $nin: activeIds } });
+      deleteQuery.id = { $nin: activeIds };
+      await Position.deleteMany(deleteQuery);
       for (const pos of safePositions) {
         await Position.findOneAndUpdate(
           { id: pos.id },
-          { ...pos, market },
+          { ...pos, market, userId: pos.userId },
           { upsert: true }
         );
       }
@@ -452,13 +464,18 @@ async function saveActivePositions(positions, market = 'IN') {
   }
 }
 
-async function loadActivePositions(market = 'IN') {
+async function loadActivePositions(market = 'IN', userId = null) {
   let diskPositions = readPositionsFromDisk(market);
+  if (userId) {
+    diskPositions = diskPositions.filter(p => p.userId === userId);
+  }
 
   if (isMongoConnected()) {
     try {
       const Position = require('./models/Position');
-      const mongoPositions = await Position.find({ market }).lean();
+      const query = { market };
+      if (userId) query.userId = userId;
+      const mongoPositions = await Position.find(query).lean();
       if (mongoPositions && mongoPositions.length > 0) {
         return mongoPositions;
       }

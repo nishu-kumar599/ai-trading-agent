@@ -6,12 +6,43 @@ const authRoutes = require('./routes/auth');
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// Middlewares
+// Trusted CORS allowlist
+const ALLOWED_ORIGINS = [
+  'http://localhost:5173',
+  'http://localhost:5001',
+  'http://localhost:3000',
+  'https://ai-trading-agent-819y.onrender.com'
+];
+
+if (process.env.FRONTEND_URL) {
+  ALLOWED_ORIGINS.push(process.env.FRONTEND_URL.replace(/\/$/, ''));
+}
+if (process.env.ALLOWED_ORIGINS) {
+  process.env.ALLOWED_ORIGINS.split(',').forEach(o => {
+    const trimmed = o.trim().replace(/\/$/, '');
+    if (trimmed && !ALLOWED_ORIGINS.includes(trimmed)) ALLOWED_ORIGINS.push(trimmed);
+  });
+}
+
 app.use(cors({
-  origin: '*', // Allow connections from frontend dev server
+  origin: (origin, callback) => {
+    // Allow requests with no origin (e.g. mobile apps, curl, same-origin static files)
+    if (!origin) return callback(null, true);
+
+    const isAllowed = ALLOWED_ORIGINS.includes(origin) ||
+      (process.env.NODE_ENV !== 'production' && (/^http:\/\/localhost:\d+$/.test(origin) || /^http:\/\/127\.0\.0\.1:\d+$/.test(origin)));
+
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS blocked for origin: ${origin}`));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
+
 
 app.use(express.json());
 

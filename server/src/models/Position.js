@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const positionSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
+  userId: { type: String, index: true, default: 'usr_demo_trader_001' },
   market: { type: String, enum: ['IN', 'US'], default: 'IN' },
   symbol: { type: String, required: true },
   baseSymbol: { type: String },

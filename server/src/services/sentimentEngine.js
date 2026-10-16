@@ -380,7 +380,7 @@ async function getNewsFeed() {
 }
 
 // Execute automated trade from news sentiment using real market spot prices
-async function executeNewsTrade(newsId, horizon = 'INTRADAY', quantity = 50) {
+async function executeNewsTrade(newsId, horizon = 'INTRADAY', quantity = 50, userId = 'usr_demo_trader_001') {
   const allNews = await getNewsFeed();
   const newsItem = allNews.find(n => n.id === newsId);
   if (!newsItem) return null;
@@ -432,7 +432,8 @@ async function executeNewsTrade(newsId, horizon = 'INTRADAY', quantity = 50) {
     direction,
     price: basePrice,
     quantity,
-    optionDetails
+    optionDetails,
+    userId
   });
 
   return {

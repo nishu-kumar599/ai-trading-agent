@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { authFetch } from '../utils/authFetch';
 import { Sidebar } from './Sidebar';
+
 import { SegmentExplainer } from './SegmentExplainer';
 import { StrategyCenter } from './StrategyCenter';
 import { MarketSentimentView } from './MarketSentimentView';
@@ -72,10 +74,11 @@ export const Dashboard = () => {
   const fetchRealDashboardData = async () => {
     try {
       const [posRes, quoteRes, detectRes] = await Promise.all([
-        fetch(`/api/strategies/positions?market=${marketRegion}`),
+        authFetch(`/api/strategies/positions?market=${marketRegion}`),
         fetch(`/api/market/real-quotes?market=${marketRegion}`),
         fetch(`/api/market/real-detection?market=${marketRegion}`)
       ]);
+
 
       const posText = await posRes.text();
       const posData = posText ? JSON.parse(posText) : null;
@@ -188,9 +191,8 @@ export const Dashboard = () => {
         }
       }
 
-      const res = await fetch('/api/strategies/execute', {
+      const res = await authFetch('/api/strategies/execute', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       const text = await res.text();
@@ -215,22 +217,21 @@ export const Dashboard = () => {
   const handleSimulateSurge = async () => {
     setIsTestingAction(true);
     try {
-      const posRes = await fetch(`/api/strategies/positions?market=${marketRegion}`);
+      const posRes = await authFetch(`/api/strategies/positions?market=${marketRegion}`);
       const posText = await posRes.text();
       const posData = posText ? JSON.parse(posText) : null;
       if (posData && posData.activePositions && posData.activePositions.length > 0) {
         const targetPos = posData.activePositions[0];
         const newPrice = +(targetPos.entryPrice * 1.018).toFixed(2);
-        const tickRes = await fetch(`/api/strategies/positions/${targetPos.id}/tick`, {
+        const tickRes = await authFetch(`/api/strategies/positions/${targetPos.id}/tick`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ newPrice })
         });
         const tickText = await tickRes.text();
         const tickData = tickText ? JSON.parse(tickText) : null;
         setTestMessage({
           type: 'success',
-          text: `📈 Simulated +1.8% Surge on ${targetPos.symbol} to ${currency}${newPrice}! Stop-Loss ratcheted to ${currency}${tickData?.position?.stopLoss || newPrice} (Guaranteed Zero-Loss Locked).`
+          text: `📈 Simulated +1.8% Surge on ${targetPos.symbol} to ${currency}${newPrice}! Stop-Loss ratcheted to ${currency}${tickData?.position?.stopLoss || newPrice} (Breakeven Risk Guard Locked).`
         });
         setActiveMainTab('positions');
       } else {
@@ -249,7 +250,7 @@ export const Dashboard = () => {
   const handleResetSandbox = async () => {
     setIsTestingAction(true);
     try {
-      await fetch('/api/strategies/reset-test', { method: 'POST' });
+      await authFetch('/api/strategies/reset-test', { method: 'POST' });
       setTestBalance(marketRegion === 'US' ? 25000 : 100000);
       setTestMessage({
         type: 'success',
@@ -258,6 +259,7 @@ export const Dashboard = () => {
     } catch (err) {
       setTestMessage({ type: 'error', text: 'Reset failed: ' + err.message });
     } finally {
+
       setIsTestingAction(false);
     }
   };

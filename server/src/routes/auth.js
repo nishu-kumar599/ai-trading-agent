@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -14,6 +15,9 @@ const {
 const { authenticateToken, JWT_SECRET } = require('../middleware/auth');
 
 const router = express.Router();
+
+// Rate limiting map for forgot-password requests (email -> timestamp)
+const resetRateLimitMap = new Map();
 
 // Helper to generate JWT token
 function generateToken(user) {
@@ -171,34 +175,41 @@ router.post('/forgot-password', async (req, res) => {
     }
 
     const cleanEmail = email.toLowerCase().trim();
-    const user = await findUserByEmail(cleanEmail);
-    if (!user) {
-      return res.status(404).json({
+
+    // Enforce rate limiting: 1 request per 60 seconds per email
+    const now = Date.now();
+    const lastRequest = resetRateLimitMap.get(cleanEmail);
+    if (lastRequest && (now - lastRequest < 60000)) {
+      const waitSeconds = Math.ceil((60000 - (now - lastRequest)) / 1000);
+      return res.status(429).json({
         success: false,
-        message: 'No account registered with this email address. Please sign up to create an account.'
+        message: `Too many password reset requests. Please wait ${waitSeconds} seconds before trying again.`
       });
     }
+    resetRateLimitMap.set(cleanEmail, now);
 
-    // Generate secure 6-digit verification code
-    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins expiry
+    const user = await findUserByEmail(cleanEmail);
+    if (user) {
+      // Cryptographically secure 6-digit verification code
+      const resetCode = crypto.randomInt(100000, 1000000).toString();
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins expiry
 
-    await setResetPasswordToken(cleanEmail, resetCode, expiresAt);
+      await setResetPasswordToken(cleanEmail, resetCode, expiresAt);
+      // NOTE: Security requirement: Never log reset code to console or return to browser!
+      console.log(`🔐 [Password Reset] Secure verification code issued for ${cleanEmail} (Expires in 15m)`);
+    }
 
-    console.log(`🔐 [Password Reset] Verification code for ${cleanEmail}: ${resetCode} (Expires: 15m)`);
-
+    // Security requirement: Always return identical generic message to prevent account enumeration
     return res.json({
       success: true,
-      message: `A 6-digit password reset verification code has been dispatched for ${cleanEmail}. Valid for 15 minutes.`,
-      email: cleanEmail,
-      resetCode, // Returned for instant user verification & resilience
-      expiresInMinutes: 15
+      message: 'If an account with that email address exists, a 6-digit password reset verification code has been dispatched. Valid for 15 minutes.',
+      email: cleanEmail
     });
   } catch (error) {
     console.error('Forgot password error:', error);
     return res.status(500).json({
       success: false,
-      message: 'Failed to process password reset request: ' + error.message
+      message: 'Failed to process password reset request. Please try again later.'
     });
   }
 });

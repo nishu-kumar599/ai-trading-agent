@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { authFetch } from '../utils/authFetch';
 import { 
   Zap, 
   TrendingUp, 
@@ -82,7 +83,7 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
   // Fetch positions & history
   const fetchPositions = async () => {
     try {
-      const res = await fetch(`/api/strategies/positions?market=${marketRegion}`);
+      const res = await authFetch(`/api/strategies/positions?market=${marketRegion}`);
       const text = await res.text();
       const data = text ? JSON.parse(text) : null;
       if (data && data.success) {
@@ -92,6 +93,7 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
         if (data.nextSessionMessage) setMarketStatusMsg(data.nextSessionMessage);
       }
     } catch (err) {
+
       console.error('Failed to fetch positions:', err);
     }
   };
@@ -121,16 +123,15 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
         market: marketRegion
       };
 
-      const res = await fetch('/api/strategies/execute', {
+      const res = await authFetch('/api/strategies/execute', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       const text = await res.text();
       const data = text ? JSON.parse(text) : null;
 
       if (data && data.success) {
-        setExecutionNotice(`Order Executed: ${data.trade.symbol} (${data.trade.direction}) @ ${currency}${data.trade.entryPrice} with Profit-Lock Guard!`);
+        setExecutionNotice(`Order Executed: ${data.trade.symbol} (${data.trade.direction}) @ ${currency}${data.trade.entryPrice} with Breakeven Risk Guard!`);
         fetchPositions();
         setSelectedStockToTrade(null);
         setTimeout(() => setExecutionNotice(''), 6000);
@@ -149,9 +150,8 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
 
     const simulatedPrice = +(pos.currentPrice * (1 + changePct / 100)).toFixed(2);
     try {
-      const res = await fetch(`/api/strategies/positions/${positionId}/tick`, {
+      const res = await authFetch(`/api/strategies/positions/${positionId}/tick`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ newPrice: simulatedPrice })
       });
       const text = await res.text();
@@ -167,7 +167,7 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
   // Close position
   const handleClosePosition = async (positionId) => {
     try {
-      const res = await fetch(`/api/strategies/positions/${positionId}/close`, {
+      const res = await authFetch(`/api/strategies/positions/${positionId}/close`, {
         method: 'POST'
       });
       const text = await res.text();
