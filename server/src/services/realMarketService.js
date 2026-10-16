@@ -10,9 +10,11 @@
 
 const { execFile } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 
 const SCRIPT_PATH = path.join(__dirname, 'fetch_real_market.py');
 const PYTHON_PATH = process.env.PYTHON_PATH || 'python3';
+
 
 let marketCache = {
   indices: [],
@@ -205,12 +207,19 @@ function runPythonMarketScanner() {
       ...process.env
     };
 
+    if (!env.PYTHONPATH && process.platform === 'darwin') {
+      const macUserSite = path.join(process.env.HOME || '', 'Library/Python/3.9/lib/python/site-packages');
+      if (fs.existsSync(macUserSite)) {
+        env.PYTHONPATH = macUserSite;
+      }
+    }
 
     execFile(
       PYTHON_PATH,
       [SCRIPT_PATH],
-      { env, timeout: 20000, maxBuffer: 10 * 1024 * 1024 },
+      { env, timeout: 25000, maxBuffer: 10 * 1024 * 1024 },
       (error, stdout, stderr) => {
+
         if (error) {
           console.error('Python scanner execution error:', error.message);
           return reject(error);

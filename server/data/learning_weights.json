@@ -1,23 +1,41 @@
 {
   "modelName": "reinforcement_v1",
-  "totalTradesAnalyzed": 2,
+  "totalTradesAnalyzed": 4,
   "consecutiveWins": 0,
-  "consecutiveLosses": 1,
-  "baseScoreThreshold": 81,
+  "consecutiveLosses": 3,
+  "baseScoreThreshold": 83,
   "learnedAccuracyRate": 100,
   "weights": {
     "rsiWeight": 12.25,
     "vwapWeight": 12.3,
     "emaWeight": 10,
-    "volumeWeight": 8.7,
+    "volumeWeight": 9.7,
     "riskRewardMultiplier": 1
   },
   "segmentMultipliers": {
-    "INTRADAY": 0.98,
+    "INTRADAY": 0.88,
     "F_AND_O": 1,
     "SHORT_TERM": 1
   },
   "evolutionLogs": [
+    {
+      "timestamp": "2026-10-16T12:39:02.649Z",
+      "tradeId": "pos_1792154342644_71w4jv",
+      "symbol": "RELIANCE.NS",
+      "outcome": "LOSS",
+      "pnl": -45,
+      "insight": "Loss registered on RELIANCE.NS (Net -₹45.00). Raised entry score threshold to 83 and tightened volume requirements.",
+      "weightAdjustment": "Threshold: 83, VolReq: 9.7, Multiplier (INTRADAY): 0.88"
+    },
+    {
+      "timestamp": "2026-10-16T12:37:45.426Z",
+      "tradeId": "pos_1792154265421_ywb6o5",
+      "symbol": "RELIANCE.NS",
+      "outcome": "LOSS",
+      "pnl": -45,
+      "insight": "Loss registered on RELIANCE.NS (Net -₹45.00). Raised entry score threshold to 82 and tightened volume requirements.",
+      "weightAdjustment": "Threshold: 82, VolReq: 9.2, Multiplier (INTRADAY): 0.93"
+    },
     {
       "timestamp": "2026-10-02T12:29:40.535Z",
       "tradeId": "pos_1790944180532_6iz31m",

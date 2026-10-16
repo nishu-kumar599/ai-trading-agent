@@ -235,7 +235,14 @@ router.post('/execute', authenticateToken, async (req, res) => {
         }
       } catch (e) {}
 
-      if (!price) price = liveSpot || 150.0;
+      if (!price && !liveSpot) {
+        return res.status(400).json({
+          success: false,
+          message: `Live market quote unavailable for ${symbol}. Trade execution blocked until usable market data is available.`
+        });
+      }
+
+      if (!price) price = liveSpot;
 
       const trade = executeUSTrade({
         symbol,
@@ -278,9 +285,17 @@ router.post('/execute', authenticateToken, async (req, res) => {
       }
     } catch (e) {}
 
-    if (!price) {
-      price = liveSpot || 1000.0;
+    if (!price && !liveSpot) {
+      return res.status(400).json({
+        success: false,
+        message: `Live market quote unavailable for ${symbol}. Trade execution blocked until usable market data is available.`
+      });
     }
+
+    if (!price) {
+      price = liveSpot;
+    }
+
 
     const trade = executeTrade({
       symbol,
