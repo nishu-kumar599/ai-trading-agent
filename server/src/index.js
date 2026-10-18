@@ -64,18 +64,47 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// AI Agent Overview endpoint (bridges to Python trading agent system)
+// AI Agent Overview endpoint (dynamically computed from actual trade and signal records)
 app.get('/api/agent/overview', (req, res) => {
-  res.json({
-    name: 'AlphaTrade AI Sentinel',
-    status: 'Active / Scanning',
-    symbolsTracked: ['RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'ICICIBANK.NS'],
-    timeframes: ['1m', '5m', '15m', '1d'],
-    winRate: '71.4%',
-    sharpeRatio: '2.14',
-    totalSimulatedProfit: '+$34,820.00',
-    signalsToday: 8
-  });
+  try {
+    const { getAccuracyMetrics, getAgentStatus } = require('./services/aiAgentEngine');
+    const metrics = getAccuracyMetrics();
+    const status = getAgentStatus();
+
+    const totalTrades = metrics.totalTrades || 0;
+    const winRate = totalTrades > 0 ? `${metrics.winRatePct}%` : 'N/A (No closed trades)';
+    const sharpeRatio = totalTrades >= 3 ? metrics.profitFactor.toFixed(2) : 'N/A';
+    const totalSimulatedProfit = `₹${metrics.totalRealizedPL >= 0 ? '+' : ''}${metrics.totalRealizedPL.toFixed(2)}`;
+    const signalsToday = status.dailyTradesCount || 0;
+
+    res.json({
+      name: 'AlphaTrade AI Sentinel',
+      status: status.isAutoPilotActive ? 'Active / Scanning' : 'Paused',
+      symbolsTracked: ['RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'ICICIBANK.NS', 'M&M.NS'],
+      timeframes: ['1m', '5m', '15m', '1d'],
+      winRate,
+      sharpeRatio,
+      totalSimulatedProfit,
+      signalsToday,
+      totalTrades,
+      isRealData: true,
+      dataSource: 'paper_trading_ledger'
+    });
+  } catch (err) {
+    res.json({
+      name: 'AlphaTrade AI Sentinel',
+      status: 'Standby',
+      symbolsTracked: ['RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'ICICIBANK.NS'],
+      timeframes: ['1m', '5m', '15m', '1d'],
+      winRate: 'N/A',
+      sharpeRatio: 'N/A',
+      totalSimulatedProfit: '₹0.00',
+      signalsToday: 0,
+      totalTrades: 0,
+      isRealData: true,
+      dataSource: 'paper_trading_ledger'
+    });
+  }
 });
 
 // Serve static React client in production

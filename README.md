@@ -72,28 +72,35 @@ npm run dev
 
 ---
 
-## 🔑 Default Demo Account (Instant Access)
+## 🔑 Development Demo Account (Local Sandbox Only)
 - **Email:** `demo@aitrading.com`
 - **Password:** `demo1234`
-*(Or simply click the **"1-Click Demo Login"** button on the sign-in screen)*
+*(Available in local development mode only; disabled in production environments)*
 
 ---
 
 ## 🌟 Key Platform Features
 
 1. **📅 Interactive P&L Calendar**:
-   - Month-by-month visual trading matrix (e.g. September: **+₹2,22,920.00**, 18 Green Days / 1 Red Day, 94.7% Win Rate).
+   - Month-by-month visual trading matrix dynamically computed from actual executed paper trades.
    - Click on any trading day to inspect individual trade executions in the **Daily Trade Inspector Drawer**.
 2. **🏆 Today's Market Live Audit**:
-   - Production readiness test answering if the models made profit today (**+₹16,720.00 / +16.72% net return, 0 losses**).
+   - Production readiness test evaluating real-time model execution against live exchange quotes.
    - Verifies Breakeven Stop-Loss ratchet and 5/5 safety checks before live deployment.
 3. **🧮 Position Sizing & Risk Calculator**:
-   - Calculates recommended share/lot size based on the institutional 1% risk rule, entry price, and stop-loss level.
+   - Calculates recommended share/lot size based on the institutional 1% risk rule, entry price, and actual stop-loss distance.
 4. **📊 Market Sentiment Cockpit**:
    - Fear & Greed radial gauge ($0$ to $100$), FII/DII institutional cash flow meter, Put-Call Ratio (PCR), and market breadth ratio.
 5. **📰 News-Driven AI Sentiment Trading**:
-   - Automatically buys on positive catalyst news and sells/shorts/buys puts on negative news downgrades.
+   - Automatically evaluates positive catalyst news and negative news downgrades with NLP sentiment scoring.
    - Interactive **AI News Test Lab** allows analyzing any custom headline in real-time.
-6. **🛡️ "Profit-Lock & No-Loss Guard"**:
-   - Stop-Loss snaps to Breakeven at $+1.0\%$ profit (eliminating downside loss).
-   - Dynamic trailing stop ratchets upwards to lock in peak gains.
+6. **🛡️ "Profit-Lock & Breakeven Protection Guard"**:
+   - Stop-Loss moves to Breakeven (+0.1% covering statutory costs) once Target 1 is attained.
+   - Dynamic trailing stop ratchets upwards after breakeven is reached to lock in peak unrealized gains.
+   - Two-stage profit booking: automatically scales out 50% at Target 1.
+
+---
+
+## ⚠️ Risk & Disclaimers
+
+> **IMPORTANT**: Financial trading in equities, derivatives, and currencies involves substantial risk of loss. Algorithmic protection mechanisms such as breakeven stop-losses and trailing exits mitigate downside exposure but cannot eliminate risk entirely due to potential market gaps, execution slippage, illiquid order books, and transaction fees. All trading capabilities within this application are provided in paper-trading sandbox mode for research and educational purposes.

@@ -26,7 +26,7 @@ const SEGMENT_GUIDES = {
       'Enters on EMA 9 crossing EMA 21 with confirming RSI momentum (52-70 for long, 30-48 for short).',
       'Captures quick 1.5% to 3.0% swings while automatically escaping before market close.'
     ],
-    zeroLossRule: 'At +1.0% profit, the Stop-Loss immediately snaps to Entry + 0.1% (Breakeven). If the market reverses, your capital is 100% protected with zero loss.'
+    zeroLossRule: 'At +1.0% profit, the Stop-Loss moves to Entry + 0.1% (Breakeven) to protect accrued capital against sudden market reversals, subject to normal gap/slippage risks.'
   },
   SHORT_TERM: {
     title: 'Short-Term Swing Breakout (1 – 5 Days)',
@@ -40,7 +40,7 @@ const SEGMENT_GUIDES = {
       'Confirms entry when MACD histogram expands upward and RSI bounces from the 45-55 pullback support zone.',
       'Targets 3.5% (Target 1) and 7.0% (Target 2) multi-day swing profits.'
     ],
-    zeroLossRule: 'Target 1 books 50% partial profit at +3.5%. Stop-Loss is then moved above cost price, guaranteeing a profitable trade outcome.'
+    zeroLossRule: 'Target 1 books 50% partial profit at +3.5%. Stop-Loss is then trailed above cost price to protect baseline capital.'
   },
   MEDIUM_TERM: {
     title: 'Medium-Term Positional Golden Cross (2 – 12 Weeks)',
@@ -65,10 +65,10 @@ const SEGMENT_GUIDES = {
     idealFor: 'Long-term wealth creation, compounding, and dividend harvesting',
     profitMechanism: [
       'Monitors premier bluechips (RELIANCE, TCS, HDFCBANK, INFY) for pullbacks within 5% of their 200-day SMA.',
-      'Validates weekly RSI < 40 indicating temporary market panic / extreme discount.',
+      'Validates weekly RSI < 45 and reasonable valuation.',
       'Accumulates in tranches to average down acquisition costs.'
     ],
-    zeroLossRule: 'Enforces a 10% catastrophic circuit stop-loss while rebalancing profits when price extends >35% above the 200 SMA.'
+    zeroLossRule: 'Enforces a 10% protective stop-loss while rebalancing profits when price extends >35% above the 200 SMA.'
   },
   F_AND_O: {
     title: 'Futures & Options Precision (F&O)',
@@ -172,7 +172,7 @@ export const SegmentExplainer = ({ segment }) => {
       }}>
         <ShieldCheck size={20} style={{ flexShrink: 0 }} />
         <div>
-          <strong>Zero-Loss Protection Rule:</strong> {guide.zeroLossRule}
+          <strong>Capital Protection & Breakeven Rule:</strong> {guide.zeroLossRule}
         </div>
       </div>
     </div>

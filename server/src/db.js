@@ -11,8 +11,17 @@ if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-// Initialize users file with a default demo trader account if empty
+// Initialize users file. In development, seed default demo trader account if empty.
+// In production, NEVER seed known demo accounts with default passwords!
 function initializeDB() {
+  if (process.env.NODE_ENV === 'production') {
+    if (!fs.existsSync(USERS_FILE)) {
+      fs.writeFileSync(USERS_FILE, JSON.stringify([], null, 2), 'utf-8');
+      console.log('🔒 [Database] Production mode: Demo account auto-seeding is disabled.');
+    }
+    return;
+  }
+
   if (!fs.existsSync(USERS_FILE)) {
     const salt = bcrypt.genSaltSync(10);
     const demoPasswordHash = bcrypt.hashSync('demo1234', salt);
@@ -29,7 +38,7 @@ function initializeDB() {
     ];
 
     fs.writeFileSync(USERS_FILE, JSON.stringify(initialUsers, null, 2), 'utf-8');
-    console.log('📦 Database initialized with demo trader: demo@aitrading.com / demo1234');
+    console.log('📦 Database initialized with development demo trader: demo@aitrading.com / demo1234');
   }
 }
 
@@ -118,6 +127,10 @@ async function findUserById(id) {
 }
 
 async function createUser({ name, email, passwordHash, role = 'trader' }) {
+  if (process.env.NODE_ENV === 'production' && !isMongoConnected() && (process.env.REQUIRE_MONGODB === 'true' || process.env.STRICT_DB === 'true')) {
+    throw new Error('Database service unavailable. Cannot persist user in production without active database connection.');
+  }
+
   const newUser = {
     id: `usr_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
     name: name.trim(),

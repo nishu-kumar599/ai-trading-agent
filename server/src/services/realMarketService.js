@@ -263,14 +263,33 @@ async function syncRealMarketData(force = false) {
       const result = await runPythonMarketScanner();
 
       if (result.indices && result.indices.length > 0) {
+        const oldMap = new Map((marketCache.indices || []).map(i => [i.symbol, i.price]));
+        result.indices.forEach(i => {
+          const prev = oldMap.get(i.symbol) || i.prevClose || i.price;
+          i.prevPrice = prev;
+          i.tickDirection = i.price > prev ? 'UP' : (i.price < prev ? 'DOWN' : 'SAME');
+        });
         marketCache.indices = result.indices;
       }
       if (result.stocks && result.stocks.length > 0) {
+        const oldMap = new Map((marketCache.stocks || []).map(s => [s.symbol, s.price]));
+        result.stocks.forEach(s => {
+          const prev = oldMap.get(s.symbol) || s.prevClose || s.price;
+          s.prevPrice = prev;
+          s.tickDirection = s.price > prev ? 'UP' : (s.price < prev ? 'DOWN' : 'SAME');
+        });
         marketCache.stocks = result.stocks;
       }
 
       marketCache.lastUpdated = Date.now();
       marketCache.syncStatus = 'SUCCESS';
+
+      // Update active paper positions against authentic market data
+      try {
+        const { getActivePositions } = require('./strategyEngine');
+        getActivePositions(marketCache);
+      } catch (e) {}
+
       return marketCache;
     } catch (err) {
       console.warn('Real market scanner fetch failed, using fallback cache:', err.message);
@@ -377,79 +396,6 @@ function getMarketSessionInfo() {
   };
 }
 
-let liveTickInterval = null;
-
-function startLiveTickerStream() {
-  if (liveTickInterval) return;
-
-  if (marketCache.indices.length === 0) marketCache.indices = JSON.parse(JSON.stringify(FALLBACK_INDICES));
-  if (marketCache.stocks.length === 0) marketCache.stocks = JSON.parse(JSON.stringify(FALLBACK_STOCKS));
-
-  liveTickInterval = setInterval(() => {
-    const session = getMarketSessionInfo();
-
-    // CRITICAL: When market is closed (after 15:30 IST or on weekends),
-    // NEVER generate random price jitter! Prices freeze completely at official closing prices.
-    if (!session.isOpen) {
-      (marketCache.stocks || []).forEach(stock => {
-        stock.tickDirection = 'SAME';
-      });
-      (marketCache.indices || []).forEach(idx => {
-        idx.tickDirection = 'SAME';
-      });
-      return;
-    }
-
-    // Generate realistic real-time micro-ticks on stocks ONLY during active market hours (09:15 - 15:30 IST)
-    (marketCache.stocks || []).forEach(stock => {
-      const prev = stock.price;
-      const jitterPct = (Math.random() - 0.495) * 0.0012; // -0.06% to +0.06%
-      let newPrice = +(stock.price * (1 + jitterPct)).toFixed(2);
-      
-      if (stock.dayLow && newPrice < stock.dayLow) newPrice = stock.dayLow;
-      if (stock.dayHigh && newPrice > stock.dayHigh) newPrice = stock.dayHigh;
-
-      stock.prevPrice = prev;
-      stock.price = newPrice;
-      stock.tickDirection = newPrice > prev ? 'UP' : (newPrice < prev ? 'DOWN' : 'SAME');
-      
-      const changeVal = +(stock.price - stock.prevClose).toFixed(2);
-      const changePct = +((changeVal / stock.prevClose) * 100).toFixed(2);
-      stock.changeValue = changeVal;
-      stock.changePct = `${changePct >= 0 ? '+' : ''}${changePct}%`;
-      stock.isPositive = changePct >= 0;
-    });
-
-    // Generate micro-ticks on indices ONLY during active market hours
-    (marketCache.indices || []).forEach(idx => {
-      const prev = idx.price;
-      const jitterPct = (Math.random() - 0.495) * 0.0006;
-      let newPrice = +(idx.price * (1 + jitterPct)).toFixed(2);
-      if (idx.dayLow && newPrice < idx.dayLow) newPrice = idx.dayLow;
-      if (idx.dayHigh && newPrice > idx.dayHigh) newPrice = idx.dayHigh;
-
-      idx.prevPrice = prev;
-      idx.price = newPrice;
-      idx.tickDirection = newPrice > prev ? 'UP' : (newPrice < prev ? 'DOWN' : 'SAME');
-      const changeVal = +(idx.price - idx.prevClose).toFixed(2);
-      const changePct = +((changeVal / idx.prevClose) * 100).toFixed(2);
-      idx.changeValue = changeVal;
-      idx.changePct = `${changePct >= 0 ? '+' : ''}${changePct}%`;
-      idx.isPositive = changePct >= 0;
-    });
-
-    // Auto-update active paper positions P&L on every live tick
-    try {
-      const { getActivePositions } = require('./strategyEngine');
-      getActivePositions(marketCache);
-    } catch (e) {}
-
-  }, 1500); // 1.5 second tick interval
-}
-
-// Start live ticker
-startLiveTickerStream();
-
 /**
  * Return live quotes for indices and stock ticker bar with real-time ticks
  */
@@ -458,6 +404,10 @@ async function getRealQuotes() {
   const session = getMarketSessionInfo();
   const indices = marketCache.indices && marketCache.indices.length > 0 ? marketCache.indices : FALLBACK_INDICES;
   const stocks = marketCache.stocks && marketCache.stocks.length > 0 ? marketCache.stocks : FALLBACK_STOCKS;
+
+  // Deriving isLive strictly from active market session AND successful, fresh market data
+  const isFresh = marketCache.lastUpdated > 0 && ((Date.now() - marketCache.lastUpdated) < (CACHE_TTL_MS * 2));
+  const isLive = Boolean(session.isOpen && marketCache.syncStatus === 'SUCCESS' && isFresh);
 
   return {
     isMarketOpen: session.isOpen,
@@ -496,8 +446,8 @@ async function getRealQuotes() {
       recommendedStrike: s.recommendedStrike
     })),
     lastSynced: session.istTimeString,
-    tickTimestamp: Date.now(),
-    isLive: session.isOpen,
+    tickTimestamp: marketCache.lastUpdated || Date.now(),
+    isLive,
     syncStatus: marketCache.syncStatus,
     isRealMarket: marketCache.syncStatus === 'SUCCESS',
     isFallback: marketCache.syncStatus !== 'SUCCESS',
@@ -522,6 +472,9 @@ async function getRealMarketDetection() {
     else declines++;
   });
 
+  const isFresh = marketCache.lastUpdated > 0 && ((Date.now() - marketCache.lastUpdated) < (CACHE_TTL_MS * 2));
+  const isLive = Boolean(session.isOpen && marketCache.syncStatus === 'SUCCESS' && isFresh);
+
   return {
     isMarketOpen: session.isOpen,
     marketStatus: session.status,
@@ -538,7 +491,8 @@ async function getRealMarketDetection() {
     topGainers: [...stocks].sort((a, b) => parseFloat(b.changePct) - parseFloat(a.changePct)).slice(0, 5),
     topLosers: [...stocks].sort((a, b) => parseFloat(a.changePct) - parseFloat(b.changePct)).slice(0, 5),
     lastSynced: session.istTimeString,
-    tickTimestamp: Date.now(),
+    tickTimestamp: marketCache.lastUpdated || Date.now(),
+    isLive,
     syncStatus: marketCache.syncStatus,
     isRealMarket: marketCache.syncStatus === 'SUCCESS',
     isFallback: marketCache.syncStatus !== 'SUCCESS',

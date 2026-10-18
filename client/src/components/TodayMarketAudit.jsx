@@ -71,7 +71,7 @@ export const TodayMarketAudit = () => {
       'Realized P&L %',
       'Status',
       'Exit Reason',
-      'Zero-Loss Protection Note'
+      'Capital Protection Note'
     ];
 
     const rows = trades.map(t => [
@@ -137,7 +137,7 @@ export const TodayMarketAudit = () => {
             Today's Market Live Profit Audit
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', marginTop: '4px', maxWidth: '650px', lineHeight: '1.5' }}>
-            Verification of all trades executed today across Intraday, Swing, F&O, and News Catalysts. Verifies whether the models achieved net profit and strictly obeyed the Zero-Loss Profit-Lock Guard before production deployment.
+            Verification of all trades executed today across Intraday, Swing, F&O, and News Catalysts. Verifies whether the models achieved net profit and strictly obeyed the Breakeven Profit-Lock Guard before production deployment.
           </p>
         </div>
 
@@ -225,7 +225,7 @@ export const TodayMarketAudit = () => {
 
         <div className="stat-card">
           <div className="stat-card-title">
-            <span>Win Rate (Zero Loss)</span>
+            <span>Win Rate (Breakeven Protected)</span>
             <ShieldCheck size={16} color="#06b6d4" />
           </div>
           <div className="stat-card-value">
@@ -397,7 +397,7 @@ export const TodayMarketAudit = () => {
                     <th>Exit Price</th>
                     <th>Realized P&L</th>
                     <th>Status</th>
-                    <th>Zero-Loss Protection Verification</th>
+                    <th>Breakeven Protection Verification</th>
                   </tr>
                 </thead>
                 <tbody>

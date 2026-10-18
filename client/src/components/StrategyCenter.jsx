@@ -293,7 +293,7 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#10b981', fontWeight: 700, fontSize: '0.9rem' }}>
                   <ShieldCheck size={18} />
-                  Profit-Lock & No-Loss Guard
+                  Profit-Lock & Breakeven Protection Guard
                 </div>
                 <span style={{ fontSize: '0.75rem', background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', padding: '2px 8px', borderRadius: '4px' }}>
                   ACTIVE
@@ -302,7 +302,7 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.8rem', color: '#cbd5e1' }}>
                 <li style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
                   <Check size={14} color="#10b981" style={{ flexShrink: 0, marginTop: '2px' }} />
-                  <span><strong>Breakeven Ratchet:</strong> Once trade moves +1.0% in profit, Stop-Loss instantly snaps to Entry Price (eliminating loss risk).</span>
+                  <span><strong>Breakeven Ratchet:</strong> Once trade moves +1.0% in profit, Stop-Loss moves to Entry Price to protect baseline capital against reversals.</span>
                 </li>
                 <li style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
                   <Check size={14} color="#10b981" style={{ flexShrink: 0, marginTop: '2px' }} />
@@ -587,7 +587,7 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
             }}>
               <ShieldCheck size={20} style={{ flexShrink: 0 }} />
               <div>
-                <strong>Zero-Loss Protection Engaged:</strong> Stop-loss automatically jumps to breakeven once +1% profit is attained.
+                <strong>Capital Protection Engaged:</strong> Stop-loss automatically moves to breakeven once +1% profit is attained.
               </div>
             </div>
 
@@ -645,7 +645,7 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: '2px' }}>
               {isMarketOpen 
-                ? 'Prices and returns update live every 1.5s with automated Zero-Loss Breakeven & Trailing Stop' 
+                ? 'Prices and returns update live with automated Breakeven Capital Protection & Trailing Stop' 
                 : (marketRegion === 'US' 
                     ? 'Exchange is closed (09:30 - 16:00 EST). Prices are frozen at official closing settlement.' 
                     : 'Exchange is closed (09:15 - 15:30 IST). Prices are frozen at official closing settlement (Zerodha/Groww aligned).')}

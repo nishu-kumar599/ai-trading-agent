@@ -467,64 +467,13 @@ function getUSMarketSessionInfo() {
 }
 
 /**
- * Start simulated micro-tick stream for US stocks during US market hours
+ * Return live quotes for US indices and stock universe
  */
-function startUSLiveTickerStream() {
-  setInterval(() => {
-    const session = getUSMarketSessionInfo();
-
-    // Freeze completely when US market is closed
-    if (!session.isOpen) {
-      (usMarketCache.stocks || []).forEach(stock => {
-        stock.tickDirection = 'SAME';
-      });
-      (usMarketCache.indices || []).forEach(idx => {
-        idx.tickDirection = 'SAME';
-      });
-      return;
-    }
-
-    // Micro-ticks during active hours
-    (usMarketCache.stocks || []).forEach(stock => {
-      const prev = stock.price;
-      const jitterPct = (Math.random() - 0.495) * 0.0010;
-      let newPrice = +(stock.price * (1 + jitterPct)).toFixed(2);
-      if (stock.dayLow && newPrice < stock.dayLow) newPrice = stock.dayLow;
-      if (stock.dayHigh && newPrice > stock.dayHigh) newPrice = stock.dayHigh;
-
-      stock.prevPrice = prev;
-      stock.price = newPrice;
-      stock.tickDirection = newPrice > prev ? 'UP' : (newPrice < prev ? 'DOWN' : 'SAME');
-      const changeVal = +(stock.price - stock.prevClose).toFixed(2);
-      const changePct = +((changeVal / stock.prevClose) * 100).toFixed(2);
-      stock.changeValue = changeVal;
-      stock.changePct = `${changePct >= 0 ? '+' : ''}${changePct}%`;
-      stock.isPositive = changePct >= 0;
-    });
-
-    (usMarketCache.indices || []).forEach(idx => {
-      const prev = idx.price;
-      const jitterPct = (Math.random() - 0.495) * 0.0005;
-      let newPrice = +(idx.price * (1 + jitterPct)).toFixed(2);
-      if (idx.dayLow && newPrice < idx.dayLow) newPrice = idx.dayLow;
-      if (idx.dayHigh && newPrice > idx.dayHigh) newPrice = idx.dayHigh;
-
-      idx.prevPrice = prev;
-      idx.price = newPrice;
-      idx.tickDirection = newPrice > prev ? 'UP' : (newPrice < prev ? 'DOWN' : 'SAME');
-      const changeVal = +(idx.price - idx.prevClose).toFixed(2);
-      const changePct = +((changeVal / idx.prevClose) * 100).toFixed(2);
-      idx.changeValue = changeVal;
-      idx.changePct = `${changePct >= 0 ? '+' : ''}${changePct}%`;
-      idx.isPositive = changePct >= 0;
-    });
-  }, 1500);
-}
-
-startUSLiveTickerStream();
-
 async function getUSRealQuotes() {
   const session = getUSMarketSessionInfo();
+  const isFresh = usMarketCache.lastUpdated > 0 && ((Date.now() - usMarketCache.lastUpdated) < (60000 * 2));
+  const isLive = Boolean(session.isOpen && usMarketCache.syncStatus === 'SUCCESS' && isFresh);
+
   return {
     isMarketOpen: session.isOpen,
     marketStatus: session.status,
@@ -533,6 +482,10 @@ async function getUSRealQuotes() {
     currency: '$',
     currencyCode: 'USD',
     nyTimeString: session.nyTimeString,
+    isLive,
+    syncStatus: usMarketCache.syncStatus,
+    isRealMarket: usMarketCache.syncStatus === 'SUCCESS',
+    dataStatus: usMarketCache.syncStatus === 'SUCCESS' ? 'REAL_MARKET' : 'FALLBACK_SIMULATION',
     indices: usMarketCache.indices.map(i => ({
       ...i,
       tickDirection: session.isOpen ? (i.tickDirection || 'SAME') : 'SAME'

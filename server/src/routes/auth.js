@@ -13,6 +13,7 @@ const {
   updateUserProfile
 } = require('../db');
 const { authenticateToken, JWT_SECRET } = require('../middleware/auth');
+const { sendPasswordResetEmail } = require('../services/emailService');
 
 const router = express.Router();
 
@@ -195,8 +196,16 @@ router.post('/forgot-password', async (req, res) => {
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins expiry
 
       await setResetPasswordToken(cleanEmail, resetCode, expiresAt);
-      // NOTE: Security requirement: Never log reset code to console or return to browser!
       console.log(`🔐 [Password Reset] Secure verification code issued for ${cleanEmail} (Expires in 15m)`);
+
+      // Dispatch verification code via configured email delivery service
+      const deliveryResult = await sendPasswordResetEmail(cleanEmail, resetCode);
+      if (!deliveryResult.success && process.env.NODE_ENV === 'production') {
+        return res.status(503).json({
+          success: false,
+          message: deliveryResult.error || 'Password reset email delivery failed. Please contact support.'
+        });
+      }
     }
 
     // Security requirement: Always return identical generic message to prevent account enumeration

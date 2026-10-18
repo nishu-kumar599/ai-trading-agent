@@ -208,7 +208,7 @@ export const RiskCalculatorModal = ({ isOpen, onClose }) => {
         }}>
           <ShieldCheck size={18} color="var(--accent-emerald)" style={{ flexShrink: 0 }} />
           <div>
-            <strong>Profit-Lock Trigger:</strong> Once price touches <strong>{currency}{breakevenTriggerPrice}</strong> (+1.0%), Stop-Loss automatically shifts to Breakeven ({currency}{entry}), eliminating risk of loss!
+            <strong>Profit-Lock Trigger:</strong> Once price touches <strong>{currency}{breakevenTriggerPrice}</strong> (+1.0%), Stop-Loss automatically shifts to Breakeven ({currency}{entry}), protecting baseline capital against sudden market reversals.
           </div>
         </div>
 

@@ -348,7 +348,7 @@ export const AutoPilotCockpit = () => {
             {marketRegion === 'US' ? 'Wall Street Autonomous AI Trading Sentinel' : 'Autonomous Multi-Segment AI Trading Sentinel'}
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: '1.5', margin: 0 }}>
-            Automatically scans <strong>{marketRegion === 'US' ? 'NYSE & NASDAQ Stocks' : 'Intraday (Long & Short Selling)'}</strong>, <strong>{marketRegion === 'US' ? 'Options & Tech Momentum' : 'F&O Options (Calls & Puts)'}</strong>, and <strong>Swing Breakouts</strong>. It aligns with <strong>{marketRegion === 'US' ? 'S&P 500 Market Regime' : 'NIFTY 50 Market Regime'}</strong>, enforces <strong>Two-Stage Profit Booking (50% scale-out at Target 1)</strong>, guarantees Zero-Loss Breakeven protection, and <strong>self-learns from every trade outcome</strong>.
+            Automatically scans <strong>{marketRegion === 'US' ? 'NYSE & NASDAQ Stocks' : 'Intraday (Long & Short Selling)'}</strong>, <strong>{marketRegion === 'US' ? 'Options & Tech Momentum' : 'F&O Options (Calls & Puts)'}</strong>, and <strong>Swing Breakouts</strong>. It aligns with <strong>{marketRegion === 'US' ? 'S&P 500 Market Regime' : 'NIFTY 50 Market Regime'}</strong>, enforces <strong>Two-Stage Profit Booking (50% scale-out at Target 1)</strong>, activates Breakeven protection, and <strong>self-learns from every trade outcome</strong>.
           </p>
 
           {/* Market Closed Standby Notice */}
@@ -777,7 +777,7 @@ export const AutoPilotCockpit = () => {
                           color: 'var(--accent-emerald)',
                           border: '1px solid rgba(16, 185, 129, 0.3)'
                         }}>
-                          🛡️ Zero-Loss Lock
+                          🛡️ Breakeven Lock
                         </span>
                       )}
                     </div>
@@ -864,7 +864,7 @@ export const AutoPilotCockpit = () => {
             </span>
           </div>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-            Includes zero-loss protected breakeven exits. Pure win rate: {accuracy.pureWinRatePct || 100}%
+            Includes capital-protected breakeven exits. Pure win rate: {accuracy.pureWinRatePct || 100}%
           </div>
         </div>
 

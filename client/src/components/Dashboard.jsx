@@ -633,7 +633,7 @@ export const Dashboard = () => {
                   gap: '6px',
                   transition: 'all 0.2s ease'
                 }}
-                title="Simulate price move up to test zero-loss breakeven ratchet"
+                title="Simulate price move up to test breakeven protection ratchet"
               >
                 <ShieldCheck size={13} />
                 Simulate +1.8% Move
