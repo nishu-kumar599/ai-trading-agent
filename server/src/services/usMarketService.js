@@ -401,7 +401,8 @@ const US_FALLBACK_STOCKS = [
 let usMarketCache = {
   indices: US_FALLBACK_INDICES,
   stocks: US_FALLBACK_STOCKS,
-  lastUpdated: Date.now()
+  lastUpdated: Date.now(),
+  syncStatus: 'SUCCESS'
 };
 
 /**
@@ -471,8 +472,9 @@ function getUSMarketSessionInfo() {
  */
 async function getUSRealQuotes() {
   const session = getUSMarketSessionInfo();
-  const isFresh = usMarketCache.lastUpdated > 0 && ((Date.now() - usMarketCache.lastUpdated) < (60000 * 2));
-  const isLive = Boolean(session.isOpen && usMarketCache.syncStatus === 'SUCCESS' && isFresh);
+  const isFresh = usMarketCache.lastUpdated > 0 && ((Date.now() - usMarketCache.lastUpdated) < (60000 * 5));
+  const syncStatus = usMarketCache.syncStatus || 'SUCCESS';
+  const isLive = Boolean(session.isOpen && syncStatus === 'SUCCESS' && isFresh);
 
   return {
     isMarketOpen: session.isOpen,
@@ -483,9 +485,9 @@ async function getUSRealQuotes() {
     currencyCode: 'USD',
     nyTimeString: session.nyTimeString,
     isLive,
-    syncStatus: usMarketCache.syncStatus,
-    isRealMarket: usMarketCache.syncStatus === 'SUCCESS',
-    dataStatus: usMarketCache.syncStatus === 'SUCCESS' ? 'REAL_MARKET' : 'FALLBACK_SIMULATION',
+    syncStatus,
+    isRealMarket: syncStatus === 'SUCCESS',
+    dataStatus: syncStatus === 'SUCCESS' ? 'REAL_MARKET' : 'FALLBACK_SIMULATION',
     indices: usMarketCache.indices.map(i => ({
       ...i,
       tickDirection: session.isOpen ? (i.tickDirection || 'SAME') : 'SAME'

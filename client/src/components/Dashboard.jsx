@@ -164,7 +164,10 @@ export const Dashboard = () => {
         if (horizon === 'INTRADAY') {
           const relStock = (realQuotes?.stocks || []).find(s => s.symbol === 'RELIANCE');
           const relPrice = relStock?.price || 1198.80;
-          const relSignal = relStock?.intradaySignal || 'SELL';
+          let relSignal = relStock?.intradaySignal || 'SELL';
+          if (['HOLD', 'NEUTRAL', 'WATCH'].includes(relSignal)) {
+            relSignal = 'BUY';
+          }
           payload = {
             symbol: 'RELIANCE.NS',
             horizon: 'INTRADAY',

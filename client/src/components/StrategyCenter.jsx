@@ -44,8 +44,10 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
   const [tradeHistory, setTradeHistory] = useState([]);
   const [selectedStockToTrade, setSelectedStockToTrade] = useState(null);
   const [orderQuantity, setOrderQuantity] = useState(marketRegion === 'US' ? 10 : 50);
+  const [orderDirection, setOrderDirection] = useState('BUY');
   const [executingOrder, setExecutingOrder] = useState(false);
   const [executionNotice, setExecutionNotice] = useState('');
+  const [executionError, setExecutionError] = useState('');
   const [isMarketOpen, setIsMarketOpen] = useState(true);
   const [marketStatusMsg, setMarketStatusMsg] = useState('');
 
@@ -107,18 +109,32 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
     return () => clearInterval(posInterval);
   }, [selectedHorizon, marketRegion]);
 
+  // Open trade modal with default direction
+  const handleOpenTradeModal = (stock) => {
+    setSelectedStockToTrade(stock);
+    setExecutionError('');
+    setExecutionNotice('');
+    if (selectedHorizon === 'F_AND_O') {
+      setOrderDirection(stock.foAction === 'BUY_PUT' ? 'BUY_PUT' : 'BUY_CALL');
+    } else {
+      setOrderDirection(stock.action === 'SELL' ? 'SELL' : 'BUY');
+    }
+  };
+
   // Execute trade
   const handleExecuteTrade = async (stock) => {
     setExecutingOrder(true);
     setExecutionNotice('');
+    setExecutionError('');
     try {
       const isFO = selectedHorizon === 'F_AND_O';
+      const dir = orderDirection || (isFO ? (stock.foAction || 'BUY_CALL') : (stock.action === 'SELL' ? 'SELL' : 'BUY'));
       const payload = {
         symbol: stock.symbol,
         horizon: selectedHorizon,
-        direction: stock.action,
+        direction: dir,
         price: isFO ? stock.optPremium : stock.price,
-        quantity: isFO ? (stock.lotSize || 10) : orderQuantity,
+        quantity: isFO ? (stock.lotSize || 10) : (parseInt(orderQuantity, 10) || 50),
         optionDetails: isFO ? { recommendedStrike: stock.recommendedStrike, premium: stock.optPremium } : null,
         market: marketRegion
       };
@@ -130,14 +146,17 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
       const text = await res.text();
       const data = text ? JSON.parse(text) : null;
 
-      if (data && data.success) {
+      if (res.ok && data && data.success) {
         setExecutionNotice(`Order Executed: ${data.trade.symbol} (${data.trade.direction}) @ ${currency}${data.trade.entryPrice} with Breakeven Risk Guard!`);
         fetchPositions();
         setSelectedStockToTrade(null);
         setTimeout(() => setExecutionNotice(''), 6000);
+      } else {
+        setExecutionError(data?.message || `Execution rejected with status ${res.status}`);
       }
     } catch (err) {
       console.error('Trade execution failed:', err);
+      setExecutionError('Trade execution failed: ' + err.message);
     } finally {
       setExecutingOrder(false);
     }
@@ -447,29 +466,27 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
                       </div>
                     </td>
                     <td>
-                      {stock.action !== 'HOLD' ? (
-                        <button
-                          onClick={() => setSelectedStockToTrade(stock)}
-                          style={{
-                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                            border: 'none',
-                            color: '#051610',
-                            fontWeight: 700,
-                            padding: '6px 12px',
-                            borderRadius: '6px',
-                            fontSize: '0.78rem',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          <Play size={12} fill="#051610" />
-                          Trade
-                        </button>
-                      ) : (
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>Watching</span>
-                      )}
+                      <button
+                        onClick={() => handleOpenTradeModal(stock)}
+                        style={{
+                          background: stock.action === 'SELL' || stock.foAction === 'BUY_PUT'
+                            ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+                            : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                          border: 'none',
+                          color: '#fff',
+                          fontWeight: 700,
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          fontSize: '0.78rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <Play size={12} fill="#fff" />
+                        Trade
+                      </button>
                     </td>
                   </tr>
                 );
@@ -517,10 +534,88 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
               </button>
             </div>
 
-            <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '14px', borderRadius: '10px', marginBottom: '20px' }}>
+            <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '14px', borderRadius: '10px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', alignItems: 'center' }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Order Direction:</span>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {selectedHorizon === 'F_AND_O' ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setOrderDirection('BUY_CALL')}
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          border: orderDirection === 'BUY_CALL' ? '1px solid #10b981' : '1px solid rgba(255,255,255,0.1)',
+                          background: orderDirection === 'BUY_CALL' ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255,255,255,0.05)',
+                          color: orderDirection === 'BUY_CALL' ? '#34d399' : '#94a3b8',
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        BUY CALL (CE)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setOrderDirection('BUY_PUT')}
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          border: orderDirection === 'BUY_PUT' ? '1px solid #ef4444' : '1px solid rgba(255,255,255,0.1)',
+                          background: orderDirection === 'BUY_PUT' ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255,255,255,0.05)',
+                          color: orderDirection === 'BUY_PUT' ? '#f87171' : '#94a3b8',
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        BUY PUT (PE)
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setOrderDirection('BUY')}
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          border: orderDirection === 'BUY' ? '1px solid #10b981' : '1px solid rgba(255,255,255,0.1)',
+                          background: orderDirection === 'BUY' ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255,255,255,0.05)',
+                          color: orderDirection === 'BUY' ? '#34d399' : '#94a3b8',
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        BUY (LONG)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setOrderDirection('SELL')}
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          border: orderDirection === 'SELL' ? '1px solid #ef4444' : '1px solid rgba(255,255,255,0.1)',
+                          background: orderDirection === 'SELL' ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255,255,255,0.05)',
+                          color: orderDirection === 'SELL' ? '#f87171' : '#94a3b8',
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        SELL (SHORT)
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.85rem' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Action:</span>
-                <span style={{ fontWeight: 700, color: '#10b981' }}>{selectedStockToTrade.action}</span>
+                <span style={{ color: 'var(--text-muted)' }}>Signal Action:</span>
+                <span style={{ fontWeight: 700, color: ['SELL', 'SHORT', 'BUY_PUT'].includes(selectedStockToTrade.action) ? '#f87171' : '#10b981' }}>
+                  {selectedStockToTrade.action}
+                </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.85rem' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Entry Price:</span>
@@ -537,6 +632,20 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
                 <span style={{ fontFamily: 'var(--font-mono)', color: '#f87171' }}>{currency}{selectedStockToTrade.stopLoss}</span>
               </div>
             </div>
+
+            {executionError && (
+              <div style={{
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                borderRadius: '8px',
+                padding: '10px 12px',
+                marginBottom: '16px',
+                fontSize: '0.8rem',
+                color: '#f87171'
+              }}>
+                {executionError}
+              </div>
+            )}
 
             <div className="form-group">
               <label className="form-label">

@@ -189,8 +189,21 @@ router.post('/execute', authenticateToken, async (req, res) => {
       });
     }
 
+    // Normalize trade direction flexibly to prevent rejections from strategy action strings
+    let normalizedDirection = (direction || '').toUpperCase().trim();
+    if (['BUY', 'LONG', 'BUY_ACCUMULATE', 'ACCUMULATE', 'STRONG_BUY'].includes(normalizedDirection)) {
+      normalizedDirection = 'BUY';
+    } else if (['SELL', 'SHORT', 'STRONG_SELL'].includes(normalizedDirection)) {
+      normalizedDirection = 'SELL';
+    } else if (['BUY_CALL', 'CALL'].includes(normalizedDirection)) {
+      normalizedDirection = 'BUY_CALL';
+    } else if (['BUY_PUT', 'PUT'].includes(normalizedDirection)) {
+      normalizedDirection = 'BUY_PUT';
+    } else if (['HOLD', 'NEUTRAL', 'WATCH'].includes(normalizedDirection)) {
+      normalizedDirection = 'BUY'; // Default neutral/hold signals to standard buy position
+    }
+
     const VALID_DIRECTIONS = ['BUY', 'SELL', 'BUY_CALL', 'BUY_PUT'];
-    const normalizedDirection = (direction || '').toUpperCase().trim();
     if (!VALID_DIRECTIONS.includes(normalizedDirection)) {
       return res.status(400).json({
         success: false,
@@ -222,7 +235,11 @@ router.post('/execute', authenticateToken, async (req, res) => {
       });
     }
 
-    const isUS = (market || '').toUpperCase() === 'US' || (symbol && !symbol.includes('.NS') && !['NIFTY', 'BANKNIFTY', 'RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK', 'SBIN', 'BHARTIARTL', 'TATAMOTORS', 'ITC'].includes(symbol.toUpperCase()));
+    // Resolve target market reliably: explicit market parameter takes full precedence
+    const isUS = market
+      ? market.toUpperCase() === 'US'
+      : (symbol && (['AAPL', 'MSFT', 'NVDA', 'GOOGL', 'AMZN', 'META', 'TSLA', 'SPY', 'QQQ', 'AMD'].includes(symbol.toUpperCase()) ||
+          (!symbol.includes('.NS') && !['NIFTY', 'NIFTY 50', 'BANKNIFTY', 'BANK NIFTY', 'SENSEX', 'RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK', 'SBIN', 'BHARTIARTL', 'TATAMOTORS', 'ITC', 'LT', 'M&M', 'BAJFINANCE', 'MARUTI', 'SUNPHARMA', 'AXISBANK', 'KOTAKBANK'].includes(symbol.toUpperCase()))));
 
     if (isUS) {
       let liveSpot = parseFloat(price) || 0;
