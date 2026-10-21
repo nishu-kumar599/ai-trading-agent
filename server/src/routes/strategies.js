@@ -364,7 +364,7 @@ router.post('/execute', authenticateToken, async (req, res) => {
     console.error('Execute trade error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to execute simulated trade.'
+      message: error?.message || 'Failed to execute simulated trade.'
     });
   }
 });

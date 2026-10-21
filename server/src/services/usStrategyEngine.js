@@ -80,34 +80,54 @@ const US_STRATEGY_CATALOG = {
 function executeUSTrade({ symbol, horizon, direction, price, quantity, optionDetails = null, liveSpot = null, userId = 'usr_demo_trader_001' }) {
   const session = getUSMarketSessionInfo();
   const isFO = horizon === 'F_AND_O';
-  const entryPrice = isFO && optionDetails ? optionDetails.premium : price;
+
+  // Robust entry price determination
+  let rawEntryPrice = (isFO && optionDetails && optionDetails.premium !== undefined && optionDetails.premium !== null)
+    ? parseFloat(optionDetails.premium)
+    : (parseFloat(price) || parseFloat(liveSpot) || 0);
+
+  if (isFO && (!rawEntryPrice || isNaN(rawEntryPrice) || rawEntryPrice <= 0)) {
+    const spot = parseFloat(price) || parseFloat(liveSpot) || 100;
+    rawEntryPrice = +(spot * 0.025).toFixed(2);
+  }
+
+  const numEntryPrice = (!isNaN(rawEntryPrice) && rawEntryPrice > 0)
+    ? parseFloat(rawEntryPrice.toFixed(2))
+    : (parseFloat(price) || parseFloat(liveSpot) || 50.0);
+
   const isOptionBuyer = direction === 'BUY_CALL' || direction === 'BUY_PUT';
   const isUpwardTrade = isOptionBuyer || direction === 'BUY';
 
-  let initialSL = isUpwardTrade ? entryPrice * 0.992 : entryPrice * 1.008;
-  let target1 = isUpwardTrade ? entryPrice * 1.015 : entryPrice * 0.985;
-  let target2 = isUpwardTrade ? entryPrice * 1.030 : entryPrice * 0.970;
+  let initialSL = isUpwardTrade ? numEntryPrice * 0.992 : numEntryPrice * 1.008;
+  let target1 = isUpwardTrade ? numEntryPrice * 1.015 : numEntryPrice * 0.985;
+  let target2 = isUpwardTrade ? numEntryPrice * 1.030 : numEntryPrice * 0.970;
 
   if (isFO) {
-    initialSL = entryPrice * 0.75;
-    target1 = entryPrice * 1.45;
-    target2 = entryPrice * 2.00;
+    initialSL = numEntryPrice * 0.75;
+    target1 = numEntryPrice * 1.45;
+    target2 = numEntryPrice * 2.00;
   }
 
   const effectiveUserId = userId || 'usr_demo_trader_001';
+
+  const strikeDesc = (optionDetails && optionDetails.recommendedStrike)
+    ? optionDetails.recommendedStrike
+    : (direction === 'BUY_PUT' ? `${Math.round(numEntryPrice * 0.98)} PUT` : `${Math.round(numEntryPrice * 1.02)} CALL`);
+
+  const tradeSymbol = isFO && !symbol.includes('CALL') && !symbol.includes('PUT')
+    ? `${symbol} ${strikeDesc}`
+    : symbol;
 
   const newPosition = {
     id: `us_pos_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
     userId: effectiveUserId,
     market: 'US',
     currency: '$',
-    symbol: isFO && optionDetails && optionDetails.recommendedStrike && !symbol.includes(optionDetails.recommendedStrike)
-      ? `${symbol} ${optionDetails.recommendedStrike}`
-      : symbol,
+    symbol: tradeSymbol,
     horizon,
     direction,
-    entryPrice: +entryPrice.toFixed(2),
-    currentPrice: +entryPrice.toFixed(2),
+    entryPrice: +numEntryPrice.toFixed(2),
+    currentPrice: +numEntryPrice.toFixed(2),
     stopLoss: +initialSL.toFixed(2),
     target1: +target1.toFixed(2),
     target2: +target2.toFixed(2),
@@ -118,7 +138,7 @@ function executeUSTrade({ symbol, horizon, direction, price, quantity, optionDet
     unrealizedPLPct: 0.0,
     status: session.isOpen ? 'ACTIVE_RUNNING' : 'AMO_PENDING_OPEN',
     isAMO: !session.isOpen,
-    underlyingSpotAtEntry: liveSpot || price,
+    underlyingSpotAtEntry: liveSpot || price || numEntryPrice,
     openedAt: new Date().toISOString()
   };
 

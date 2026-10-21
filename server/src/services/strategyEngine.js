@@ -325,32 +325,53 @@ function executeTrade({ symbol, horizon, direction, price, quantity, optionDetai
   const { getMarketSessionInfo } = require('./realMarketService');
   const session = getMarketSessionInfo();
   const isFO = horizon === 'F_AND_O';
-  const entryPrice = isFO && optionDetails ? optionDetails.premium : price;
+
+  // Robustly determine entry price with fallbacks so it can NEVER be undefined/NaN
+  let rawEntryPrice = (isFO && optionDetails && optionDetails.premium !== undefined && optionDetails.premium !== null)
+    ? parseFloat(optionDetails.premium)
+    : (parseFloat(price) || parseFloat(liveSpot) || 0);
+
+  // If F&O and premium is missing or non-positive, estimate realistic ATM premium (~2.5% of spot)
+  if (isFO && (!rawEntryPrice || isNaN(rawEntryPrice) || rawEntryPrice <= 0)) {
+    const spot = parseFloat(price) || parseFloat(liveSpot) || 1000;
+    rawEntryPrice = +(spot * 0.025).toFixed(2);
+  }
+
+  const numEntryPrice = (!isNaN(rawEntryPrice) && rawEntryPrice > 0)
+    ? parseFloat(rawEntryPrice.toFixed(2))
+    : (parseFloat(price) || parseFloat(liveSpot) || 100.0);
+
   const isOptionBuyer = direction === 'BUY_CALL' || direction === 'BUY_PUT';
   const isUpwardTrade = isOptionBuyer || direction === 'BUY';
 
-  let initialSL = isUpwardTrade ? entryPrice * 0.99 : entryPrice * 1.01;
-  let target1 = isUpwardTrade ? entryPrice * 1.02 : entryPrice * 0.98;
-  let target2 = isUpwardTrade ? entryPrice * 1.04 : entryPrice * 0.96;
+  let initialSL = isUpwardTrade ? numEntryPrice * 0.99 : numEntryPrice * 1.01;
+  let target1 = isUpwardTrade ? numEntryPrice * 1.02 : numEntryPrice * 0.98;
+  let target2 = isUpwardTrade ? numEntryPrice * 1.04 : numEntryPrice * 0.96;
 
   if (isFO) {
-    initialSL = entryPrice * 0.75;
-    target1 = entryPrice * 1.45;
-    target2 = entryPrice * 2.00;
+    initialSL = numEntryPrice * 0.75;
+    target1 = numEntryPrice * 1.45;
+    target2 = numEntryPrice * 2.00;
   }
 
   const effectiveUserId = userId || 'usr_demo_trader_001';
 
+  const strikeDesc = (optionDetails && optionDetails.recommendedStrike)
+    ? optionDetails.recommendedStrike
+    : (direction === 'BUY_PUT' ? `${Math.round(numEntryPrice * 0.98)} PE` : `${Math.round(numEntryPrice * 1.02)} CE`);
+
+  const tradeSymbol = isFO && !symbol.includes('CE') && !symbol.includes('PE')
+    ? `${symbol} ${strikeDesc}`
+    : symbol;
+
   const newPosition = {
     id: `pos_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
     userId: effectiveUserId,
-    symbol: isFO && optionDetails && optionDetails.recommendedStrike && !symbol.includes(optionDetails.recommendedStrike)
-      ? `${symbol} ${optionDetails.recommendedStrike}`
-      : symbol,
+    symbol: tradeSymbol,
     horizon,
     direction,
-    entryPrice: +entryPrice.toFixed(2),
-    currentPrice: +entryPrice.toFixed(2),
+    entryPrice: +numEntryPrice.toFixed(2),
+    currentPrice: +numEntryPrice.toFixed(2),
     stopLoss: +initialSL.toFixed(2),
     target1: +target1.toFixed(2),
     target2: +target2.toFixed(2),
@@ -361,7 +382,7 @@ function executeTrade({ symbol, horizon, direction, price, quantity, optionDetai
     unrealizedPLPct: 0.0,
     status: session.isOpen ? 'ACTIVE_RUNNING' : 'AMO_PENDING_OPEN',
     isAMO: !session.isOpen,
-    underlyingSpotAtEntry: liveSpot || price,
+    underlyingSpotAtEntry: liveSpot || price || numEntryPrice,
     openedAt: new Date().toISOString()
   };
 

@@ -129,13 +129,17 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
     try {
       const isFO = selectedHorizon === 'F_AND_O';
       const dir = orderDirection || (isFO ? (stock.foAction || 'BUY_CALL') : (stock.action === 'SELL' ? 'SELL' : 'BUY'));
+      const stockPrice = parseFloat(stock.price) || 100;
+      const optPremium = parseFloat(stock.optPremium) || +(stockPrice * 0.025).toFixed(2);
+      const strike = stock.recommendedStrike || (dir === 'BUY_PUT' ? `${Math.round(stockPrice * 0.98)} PE` : `${Math.round(stockPrice * 1.02)} CE`);
+
       const payload = {
         symbol: stock.symbol,
         horizon: selectedHorizon,
         direction: dir,
-        price: isFO ? stock.optPremium : stock.price,
+        price: isFO ? optPremium : stockPrice,
         quantity: isFO ? (stock.lotSize || 10) : (parseInt(orderQuantity, 10) || 50),
-        optionDetails: isFO ? { recommendedStrike: stock.recommendedStrike, premium: stock.optPremium } : null,
+        optionDetails: isFO ? { recommendedStrike: strike, premium: optPremium } : null,
         market: marketRegion
       };
 
