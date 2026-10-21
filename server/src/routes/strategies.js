@@ -176,6 +176,29 @@ router.get('/positions', optionalAuthenticateToken, async (req, res) => {
   });
 });
 
+// GET /api/strategies/execute (Browser navigation fallback & API usage info)
+router.get('/execute', (req, res) => {
+  const isBrowser = req.headers.accept && req.headers.accept.includes('text/html');
+  if (isBrowser) {
+    return res.redirect('/');
+  }
+  res.status(200).json({
+    success: true,
+    endpoint: '/api/strategies/execute',
+    allowedMethod: 'POST',
+    description: 'This is an order execution endpoint that accepts POST requests authenticated with a Bearer JWT token.',
+    payloadFormat: {
+      symbol: 'RELIANCE.NS (or NVDA for US)',
+      horizon: 'INTRADAY | SHORT_TERM | MEDIUM_TERM | LONG_TERM | F_AND_O',
+      direction: 'BUY | SELL | BUY_CALL | BUY_PUT',
+      price: 1204.10,
+      quantity: 50,
+      market: 'IN | US',
+      optionDetails: { recommendedStrike: '24700 PE', premium: 145.0 }
+    }
+  });
+});
+
 // POST /api/strategies/execute
 router.post('/execute', authenticateToken, async (req, res) => {
   try {
