@@ -21,7 +21,7 @@ async function runAllPriorityTests() {
   const { JWT_SECRET } = require('../src/middleware/auth');
 
   const app = express();
-  app.use(express.json());
+  app.use(express.json({ type: ['application/json', 'text/plain'] }));
   app.use('/api/auth', authRoutes);
   app.use('/api/strategies', strategyRoutes);
   app.use('/api/ai-agent', aiAgentRoutes);
@@ -149,6 +149,32 @@ async function runAllPriorityTests() {
   });
   assert.strictEqual(user1Trade.status, 201, 'User 1 trade execution should succeed');
   const posId1 = user1Trade.body.trade.id;
+
+  // Browser fetch() defaults string bodies to text/plain when Content-Type is omitted.
+  // Trade POSTs must still parse so orders are not rejected as missing symbol.
+  console.log('📝 [P1] Testing trade execution without explicit JSON Content-Type...');
+  const plainTradeRes = await fetch(`${baseUrl}/api/strategies/execute`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${tokenUser1}` },
+    body: JSON.stringify({
+      symbol: 'TCS.NS',
+      direction: 'BUY',
+      quantity: 10,
+      price: 3500.00
+    })
+  });
+  const plainTradeText = await plainTradeRes.text();
+  let plainTradeBody = null;
+  try { plainTradeBody = plainTradeText ? JSON.parse(plainTradeText) : null; } catch (e) {}
+  assert.strictEqual(plainTradeRes.status, 201, 'Trade POST without Content-Type must still execute (201)');
+  assert.strictEqual(plainTradeBody?.success, true, 'Trade body must report success when Content-Type is omitted');
+  if (plainTradeBody?.trade?.id) {
+    await api(`/api/strategies/positions/${plainTradeBody.trade.id}/close`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${tokenUser1}` }
+    });
+  }
+  console.log('   ✅ Orders execute even when the client omits application/json Content-Type.\n');
 
   const user2Positions = await api('/api/strategies/positions?market=IN', {
     headers: { 'Authorization': `Bearer ${tokenUser2}` }

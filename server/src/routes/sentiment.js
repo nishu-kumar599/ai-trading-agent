@@ -40,7 +40,7 @@ router.get('/news', async (req, res) => {
 
 // POST /api/sentiment/analyze
 router.post('/analyze', (req, res) => {
-  const { text, symbol } = req.body;
+  const { text, symbol } = req.body || {};
   if (!text) {
     return res.status(400).json({ success: false, message: 'News text is required.' });
   }
@@ -54,7 +54,7 @@ router.post('/analyze', (req, res) => {
 
 // POST /api/sentiment/publish-news
 router.post('/publish-news', authenticateToken, (req, res) => {
-  const { headline, source, symbol } = req.body;
+  const { headline, source, symbol } = req.body || {};
   if (!headline) {
     return res.status(400).json({ success: false, message: 'Headline is required.' });
   }
@@ -69,7 +69,7 @@ router.post('/publish-news', authenticateToken, (req, res) => {
 // POST /api/sentiment/trade
 router.post('/trade', authenticateToken, async (req, res) => {
   try {
-    const { newsId, horizon, quantity } = req.body;
+    const { newsId, horizon, quantity } = req.body || {};
     const userId = req.user.id;
 
     if (!newsId) {

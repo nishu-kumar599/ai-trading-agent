@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { MarketProvider } from './context/MarketContext';
 import { Login } from './components/Login';
@@ -11,6 +11,14 @@ import { TrendingUp } from 'lucide-react';
 function AppContent() {
   const { isAuthenticated, loading } = useAuth();
   const [authView, setAuthView] = useState('login'); // 'login' | 'signup' | 'forgot'
+
+  // Heartbeat to keep the Render server warm & awake while web application is open
+  useEffect(() => {
+    const keepAliveInterval = setInterval(() => {
+      fetch('/api/health').catch(() => {});
+    }, 9 * 60 * 1000); // every 9 minutes (Render sleeps at 15 min)
+    return () => clearInterval(keepAliveInterval);
+  }, []);
 
   if (loading) {
     return (

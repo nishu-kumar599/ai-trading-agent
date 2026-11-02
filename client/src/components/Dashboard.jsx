@@ -134,68 +134,86 @@ export const Dashboard = () => {
   const advances = marketDetection?.breadth?.advances || marketDetection?.marketBreadth?.advances || (marketRegion === 'US' ? 7 : 1);
   const declines = marketDetection?.breadth?.declines || marketDetection?.marketBreadth?.declines || (marketRegion === 'US' ? 3 : 14);
 
-  const handleExecuteQuickTest = async (horizon) => {
+  const handleExecuteQuickTest = async (stockOrHorizon = 'INTRADAY') => {
     setIsTestingAction(true);
     try {
       let payload;
-      if (marketRegion === 'US') {
-        if (horizon === 'INTRADAY') {
-          const nvda = (realQuotes?.stocks || []).find(s => s.symbol === 'NVDA');
-          payload = {
-            symbol: 'NVDA',
-            horizon: 'INTRADAY',
-            direction: 'BUY',
-            price: nvda?.price || 121.40,
-            quantity: 15,
-            market: 'US'
-          };
-        } else {
-          const aapl = (realQuotes?.stocks || []).find(s => s.symbol === 'AAPL');
-          payload = {
-            symbol: 'AAPL',
-            horizon: 'SHORT_TERM',
-            direction: 'BUY',
-            price: aapl?.price || 228.50,
-            quantity: 10,
-            market: 'US'
-          };
-        }
+      const isStockObj = stockOrHorizon && typeof stockOrHorizon === 'object' && stockOrHorizon.symbol;
+
+      if (isStockObj) {
+        const stock = stockOrHorizon;
+        const sym = stock.symbol.includes('.NS') || marketRegion === 'US' ? stock.symbol : `${stock.symbol}.NS`;
+        const dir = (stock.intradaySignal === 'SELL' || stock.foAction === 'BUY_PUT') ? 'SELL' : 'BUY';
+        payload = {
+          symbol: sym,
+          horizon: 'INTRADAY',
+          direction: dir,
+          price: parseFloat(stock.price) || 100,
+          quantity: marketRegion === 'US' ? 10 : 50,
+          market: marketRegion
+        };
       } else {
-        if (horizon === 'INTRADAY') {
-          const relStock = (realQuotes?.stocks || []).find(s => s.symbol === 'RELIANCE');
-          const relPrice = relStock?.price || 1198.80;
-          let relSignal = relStock?.intradaySignal || 'SELL';
-          if (['HOLD', 'NEUTRAL', 'WATCH'].includes(relSignal)) {
-            relSignal = 'BUY';
+        const horizon = typeof stockOrHorizon === 'string' ? stockOrHorizon : 'INTRADAY';
+        if (marketRegion === 'US') {
+          if (horizon === 'INTRADAY') {
+            const nvda = (realQuotes?.stocks || []).find(s => s.symbol === 'NVDA');
+            payload = {
+              symbol: 'NVDA',
+              horizon: 'INTRADAY',
+              direction: 'BUY',
+              price: nvda?.price || 121.40,
+              quantity: 15,
+              market: 'US'
+            };
+          } else {
+            const aapl = (realQuotes?.stocks || []).find(s => s.symbol === 'AAPL');
+            payload = {
+              symbol: 'AAPL',
+              horizon: 'SHORT_TERM',
+              direction: 'BUY',
+              price: aapl?.price || 228.50,
+              quantity: 10,
+              market: 'US'
+            };
           }
-          payload = {
-            symbol: 'RELIANCE.NS',
-            horizon: 'INTRADAY',
-            direction: relSignal,
-            price: relPrice,
-            quantity: 50,
-            market: 'IN'
-          };
         } else {
-          const nPrice = benchmarkIdx?.price || 22794.00;
-          const strike = Math.round(nPrice / 50) * 50;
-          payload = {
-            symbol: 'NIFTY 50',
-            horizon: 'F_AND_O',
-            direction: 'BUY_PUT',
-            price: +(nPrice * 0.024).toFixed(2),
-            quantity: 75,
-            optionDetails: {
-              recommendedStrike: `${strike} PE`,
-              premium: +(nPrice * 0.024).toFixed(2)
-            },
-            market: 'IN'
-          };
+          if (horizon === 'INTRADAY') {
+            const relStock = (realQuotes?.stocks || []).find(s => s.symbol === 'RELIANCE');
+            const relPrice = relStock?.price || 1198.80;
+            let relSignal = relStock?.intradaySignal || 'SELL';
+            if (['HOLD', 'NEUTRAL', 'WATCH'].includes(relSignal)) {
+              relSignal = 'BUY';
+            }
+            payload = {
+              symbol: 'RELIANCE.NS',
+              horizon: 'INTRADAY',
+              direction: relSignal,
+              price: relPrice,
+              quantity: 50,
+              market: 'IN'
+            };
+          } else {
+            const nPrice = benchmarkIdx?.price || 22794.00;
+            const strike = Math.round(nPrice / 50) * 50;
+            payload = {
+              symbol: 'NIFTY 50',
+              horizon: 'F_AND_O',
+              direction: 'BUY_PUT',
+              price: +(nPrice * 0.024).toFixed(2),
+              quantity: 75,
+              optionDetails: {
+                recommendedStrike: `${strike} PE`,
+                premium: +(nPrice * 0.024).toFixed(2)
+              },
+              market: 'IN'
+            };
+          }
         }
       }
 
       const res = await authFetch('/api/strategies/execute', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       const text = await res.text();
@@ -755,7 +773,7 @@ export const Dashboard = () => {
             <ErrorBoundary resetKey={activeMainTab} fallbackAction={() => setActiveMainTab('calendar')}>
               {activeMainTab === 'indices' && (
                 <MarketIndicesView 
-                  onExecuteQuickTrade={(stock) => handleExecuteQuickTest('INTRADAY')} 
+                  onExecuteQuickTrade={(stock) => handleExecuteQuickTest(stock || 'INTRADAY')} 
                 />
               )}
               {activeMainTab === 'ipo' && (

@@ -157,7 +157,7 @@ router.post('/panic-exit-all', authenticateToken, async (req, res) => {
 // POST /api/ai-agent/risk-profile (Conservative, Balanced, Aggressive)
 router.post('/risk-profile', authenticateToken, (req, res) => {
   try {
-    const { profile } = req.body;
+    const { profile } = req.body || {};
     const result = setRiskProfile(profile);
     const status = getAgentStatus();
     res.json({
@@ -174,9 +174,10 @@ router.post('/risk-profile', authenticateToken, (req, res) => {
 // POST /api/ai-agent/toggle
 router.post('/toggle', authenticateToken, (req, res) => {
   try {
-    const market = (req.body.market || req.query.market || 'IN').toUpperCase();
+    const body = req.body || {};
+    const market = (body.market || req.query.market || 'IN').toUpperCase();
     if (market === 'US') {
-      const isAutoPilotActive = toggleUSAutoPilot(req.body.enabled);
+      const isAutoPilotActive = toggleUSAutoPilot(body.enabled);
       return res.json({
         success: true,
         market: 'US',
@@ -185,7 +186,7 @@ router.post('/toggle', authenticateToken, (req, res) => {
       });
     }
 
-    const { enabled } = req.body;
+    const { enabled } = body;
     const isAutoPilotActive = toggleAutoPilot(enabled);
     res.json({
       success: true,

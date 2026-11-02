@@ -44,7 +44,50 @@ app.use(cors({
 }));
 
 
-app.use(express.json());
+// Body parsers: support standard JSON, text/plain (from fetch), and URL-encoded forms
+app.use(express.json({ limit: '10mb', type: ['application/json', 'text/plain', 'application/*+json'] }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Universal body parser safety net: ensures req.body is never undefined on incoming mutation requests
+app.use((req, res, next) => {
+  if (req.body !== undefined) {
+    if (typeof req.body === 'string') {
+      try {
+        req.body = JSON.parse(req.body);
+      } catch (e) {
+        // Leave as string if not JSON
+      }
+    }
+    return next();
+  }
+
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    req.body = {};
+    return next();
+  }
+
+  let data = '';
+  req.on('data', chunk => {
+    data += chunk;
+  });
+  req.on('end', () => {
+    if (data && data.trim()) {
+      try {
+        req.body = JSON.parse(data);
+      } catch (e) {
+        try {
+          const qs = require('querystring');
+          req.body = qs.parse(data);
+        } catch (err2) {
+          req.body = {};
+        }
+      }
+    } else {
+      req.body = {};
+    }
+    next();
+  });
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -56,11 +99,18 @@ app.use('/api/ai-agent', require('./routes/aiAgent'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
+  let keepAlive = null;
+  try {
+    const { getKeepAliveStatus } = require('./services/keepAliveService');
+    keepAlive = getKeepAliveStatus();
+  } catch (e) {}
+
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     service: 'AI Trading Agent Backend API',
-    version: '1.0.0'
+    version: '1.0.0',
+    keepAlive
   });
 });
 
@@ -188,4 +238,14 @@ app.listen(PORT, '0.0.0.0', async () => {
   } catch (err) {
     console.error('Failed to start Autonomous AI Agent:', err.message);
   }
+
+  // Start Render Self-Keep-Alive Sentinel (pings every 10 min to prevent free tier sleep)
+  try {
+    const { startKeepAlive } = require('./services/keepAliveService');
+    startKeepAlive();
+  } catch (err) {
+    console.warn('KeepAlive initialization notice:', err.message);
+  }
 });
+
+module.exports = { app };

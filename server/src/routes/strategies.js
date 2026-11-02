@@ -202,13 +202,31 @@ router.get('/execute', (req, res) => {
 // POST /api/strategies/execute
 router.post('/execute', authenticateToken, async (req, res) => {
   try {
-    let { symbol, horizon, direction, price, quantity, optionDetails, market } = req.body;
+    let body = req.body;
+    if (typeof body === 'string') {
+      try {
+        body = JSON.parse(body);
+      } catch (e) {
+        body = {};
+      }
+    }
+    if (!body || typeof body !== 'object') {
+      body = {};
+    }
+
+    let symbol = body.symbol || req.query.symbol;
+    let horizon = body.horizon || req.query.horizon;
+    let direction = body.direction || req.query.direction;
+    let price = body.price !== undefined ? body.price : req.query.price;
+    let quantity = body.quantity !== undefined ? body.quantity : req.query.quantity;
+    let optionDetails = body.optionDetails || null;
+    let market = body.market || req.query.market;
     const userId = req.user.id;
 
     if (!symbol || typeof symbol !== 'string' || symbol.trim().length === 0 || symbol.length > 50) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid or missing stock symbol.'
+        message: 'Invalid or missing stock symbol in request body.'
       });
     }
 
@@ -371,7 +389,8 @@ router.post('/execute', authenticateToken, async (req, res) => {
 
 // POST /api/strategies/positions/:id/tick
 router.post('/positions/:id/tick', authenticateToken, (req, res) => {
-  const { newPrice } = req.body;
+  const body = req.body || {};
+  const newPrice = body.newPrice !== undefined ? body.newPrice : req.query.newPrice;
   const id = req.params.id;
   const userId = req.user.id;
 

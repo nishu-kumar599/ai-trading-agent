@@ -12,3 +12,7 @@ services:
         value: production
       - key: JWT_SECRET
         generateValue: true
+      - key: SERVER_URL
+        value: https://ai-trading-agent-819y.onrender.com
+      - key: KEEP_ALIVE_INTERVAL_MINUTES
+        value: 10

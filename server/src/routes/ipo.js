@@ -44,7 +44,7 @@ router.get('/:id/details', async (req, res) => {
 // POST /api/ipo/bid
 router.post('/bid', authenticateToken, async (req, res) => {
   try {
-    const { ipoId, lots, category, upiId, market } = req.body;
+    const { ipoId, lots, category, upiId, market } = req.body || {};
     if (!ipoId) {
       return res.status(400).json({ success: false, error: 'ipoId is required' });
     }
