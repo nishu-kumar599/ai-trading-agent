@@ -67,7 +67,7 @@ export const Sidebar = ({
       groupTitle: 'EXECUTION & AUDIT',
       items: [
         { id: 'calendar', label: 'P&L Calendar', icon: Calendar, badge: marketRegion === 'US' ? '+$12.4K Mo' : '+₹2.22L Mo' },
-        { id: 'positions', label: 'Active Positions', icon: ShieldCheck, badge: 'Profit-Lock' },
+        { id: 'positions', label: 'Positions & Trade History', icon: ShieldCheck, badge: 'Active & Past' },
         { id: 'today_audit', label: "Today's Live Audit", icon: Award, badge: 'Production A+' }
       ]
     }

@@ -13,16 +13,46 @@ const { recordTradeOutcome } = require('./aiLearningEngine');
 const US_STATE_FILE_PATH = path.join(__dirname, '../../data/us_agent_state.json');
 const US_BROKERAGE_TAXES = 1.00;
 
+const US_RISK_PROFILES = {
+  CONSERVATIVE: {
+    name: 'CONSERVATIVE',
+    maxConcurrentPositions: 2,
+    baseScoreThreshold: 80,
+    minCashReserveRatio: 0.75,
+    riskPerTradePct: 0.015,
+    dailyTradeLimit: 5,
+    description: 'High selectivity: max 2 positions, Score ≥ 80, 75% cash floor.'
+  },
+  BALANCED: {
+    name: 'BALANCED',
+    maxConcurrentPositions: 3,
+    baseScoreThreshold: 74,
+    minCashReserveRatio: 0.65,
+    riskPerTradePct: 0.02,
+    dailyTradeLimit: 8,
+    description: 'Optimal balance: max 3 positions, Score ≥ 74, 65% cash floor.'
+  },
+  AGGRESSIVE: {
+    name: 'AGGRESSIVE',
+    maxConcurrentPositions: 5,
+    baseScoreThreshold: 70, // 70 as requested
+    minCashReserveRatio: 0.40,
+    riskPerTradePct: 0.035,
+    dailyTradeLimit: 15,
+    description: 'High Aggression: Score ≥ 70, max 5 positions, broad multi-horizon coverage (Intraday, Short-Term, Long-Term, Options).'
+  }
+};
+
 let state = {
   isAutoPilotActive: true,
   riskProfile: 'BALANCED',
-  maxConcurrentPositions: 2,
-  dailyTradeLimit: 5,
+  maxConcurrentPositions: 3,
+  dailyTradeLimit: 8,
   dailyTradesCount: 0,
   lastTradeDate: new Date().toISOString().split('T')[0],
   lastTradeTimestamp: 0,
   tradeCooldownMs: 10 * 60 * 1000,
-  minCashReserveRatio: 0.70,
+  minCashReserveRatio: 0.65,
   virtualCapital: 25000, // $25,000 USD virtual capital
   allocatedCapital: 0,
   lastScanTimestamp: 0,
@@ -209,6 +239,20 @@ async function monitorAndManageUSPositions(realQuotes) {
   await persistUSState();
 }
 
+function setUSRiskProfile(profileName) {
+  const profileKey = (profileName || 'BALANCED').toUpperCase();
+  const profile = US_RISK_PROFILES[profileKey] || US_RISK_PROFILES.BALANCED;
+
+  state.riskProfile = profile.name;
+  state.maxConcurrentPositions = profile.maxConcurrentPositions;
+  state.dailyTradeLimit = profile.dailyTradeLimit;
+  state.minCashReserveRatio = profile.minCashReserveRatio;
+
+  persistUSState();
+  addUSDecisionLog('SYSTEM', `US Risk Profile switched to: ${profile.name} (${profile.description})`);
+  return { success: true, profile: profile.name, details: profile };
+}
+
 async function runUSAutonomousCycle() {
   if (isLoopRunning) return;
   isLoopRunning = true;
@@ -218,44 +262,101 @@ async function runUSAutonomousCycle() {
     const session = getUSMarketSessionInfo();
 
     const canTrade = state.isAutoPilotActive && 
-      session.isOpen && 
       state.activePositions.length < state.maxConcurrentPositions && 
       state.dailyTradesCount < state.dailyTradeLimit &&
       (Date.now() - state.lastTradeTimestamp >= state.tradeCooldownMs);
 
     if (canTrade) {
       const now = Date.now();
-      if (now - state.lastScanTimestamp > 6000) {
+      if (now - state.lastScanTimestamp > 5000) {
         state.lastScanTimestamp = now;
-        const candidates = await getUSMarketUniverse('INTRADAY');
-        const best = candidates.find(c => c.action === 'BUY' && c.rsi > 52 && c.rsi < 68);
-        if (best) {
+        const horizons = ['INTRADAY', 'SHORT_TERM', 'LONG_TERM', 'F_AND_O'];
+        const candidates = [];
+        const activeHorizons = (state.activePositions || []).map(p => p.horizon);
+        const threshold = US_RISK_PROFILES[state.riskProfile]?.baseScoreThreshold || 70;
+
+        for (const h of horizons) {
+          try {
+            const list = await getUSMarketUniverse(h);
+            (list || []).forEach(stock => {
+              let score = 55;
+              const rsi = stock.rsi || 50;
+              const isUp = stock.trend === 'BULLISH';
+
+              if (h === 'INTRADAY') {
+                if (rsi >= 50 && rsi <= 68) score += 12;
+                if (stock.price > stock.vwap) score += 10;
+                if (isUp) score += 10;
+                if (stock.volumeRatio >= 1.2) score += 8;
+              } else if (h === 'SHORT_TERM') {
+                if (rsi >= 48 && rsi <= 68) score += 12;
+                if (isUp) score += 12;
+                if (stock.confidence >= 80) score += 10;
+              } else if (h === 'LONG_TERM') {
+                if (isUp) score += 15;
+                if (rsi >= 35 && rsi <= 68) score += 12;
+                if (stock.confidence >= 80) score += 10;
+              } else if (h === 'F_AND_O') {
+                if (stock.foAction === 'BUY_CALL' && isUp) score += 14;
+                if (stock.foAction === 'BUY_PUT' && !isUp) score += 14;
+                if (rsi >= 50) score += 10;
+                if (stock.confidence >= 85) score += 8;
+              }
+
+              // Horizon diversity bonus
+              const diversityBonus = activeHorizons.includes(h) ? 0 : 4;
+              candidates.push({
+                ...stock,
+                horizon: h,
+                score,
+                sortScore: score + diversityBonus
+              });
+            });
+          } catch (e) {}
+        }
+
+        candidates.sort((a, b) => b.sortScore - a.sortScore);
+
+        // Find candidate not already open
+        for (const best of candidates) {
+          if (best.score < threshold) continue;
+          const cleanSym = best.symbol.toUpperCase();
+          const alreadyOpen = state.activePositions.some(p => p.symbol.toUpperCase().includes(cleanSym));
+          if (alreadyOpen) continue;
+
+          const isFO = best.horizon === 'F_AND_O';
+          const entryPrice = isFO ? (best.optPremium || +(best.price * 0.025).toFixed(2)) : best.price;
+          const isAMO = !session.isOpen;
+
           const newPos = {
             id: `us_auto_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
             market: 'US',
             currency: '$',
-            symbol: best.symbol,
-            horizon: 'INTRADAY',
-            direction: best.action,
-            entryPrice: best.price,
-            currentPrice: best.price,
-            stopLoss: best.stopLoss,
-            target1: best.target1,
-            target2: best.target2,
-            initialQuantity: 15,
-            quantity: 15,
+            symbol: isFO ? `${best.symbol} ${best.recommendedStrike || 'CALL'}` : best.symbol,
+            baseSymbol: best.symbol,
+            horizon: best.horizon,
+            direction: best.action || (isFO ? (best.foAction || 'BUY_CALL') : 'BUY'),
+            entryPrice: +entryPrice.toFixed(2),
+            currentPrice: +entryPrice.toFixed(2),
+            stopLoss: +best.stopLoss.toFixed(2),
+            target1: +best.target1.toFixed(2),
+            target2: +best.target2.toFixed(2),
+            initialQuantity: isFO ? 1 : 15,
+            quantity: isFO ? 1 : 15,
             partialProfitTaken: false,
             breakevenActivated: false,
-            trailingPct: 0.008,
+            trailingPct: isFO ? 0.05 : (best.horizon === 'INTRADAY' ? 0.008 : 0.015),
             unrealizedPL: 0.0,
             unrealizedPLPct: 0.0,
             grossPL: 0.0,
             brokerageCharges: US_BROKERAGE_TAXES,
             netRealizedPL: 0.0,
-            status: 'ACTIVE_RUNNING',
+            status: isAMO ? 'AMO_PENDING_OPEN' : 'ACTIVE_RUNNING',
+            isAMO,
             outcome: 'RUNNING',
             openedAt: new Date().toISOString(),
             isAutonomous: true,
+            score: best.score,
             rationale: best.rationale,
             underlyingSpotAtEntry: best.price
           };
@@ -266,7 +367,8 @@ async function runUSAutonomousCycle() {
           await saveActivePositions(state.activePositions, 'US');
           await persistUSState();
 
-          addUSDecisionLog('EXECUTE', `US Autonomous Order Placed: BUY ${best.symbol} (15 Qty @ $${best.price}). Two-Stage Profit Booking Active.`);
+          addUSDecisionLog('EXECUTE', `US Autonomous Order Placed (${best.horizon}): ${newPos.direction} ${newPos.symbol} (${newPos.quantity} Qty @ $${newPos.entryPrice}). Score: ${best.score}/100. Two-Stage Profit Booking Active.`);
+          break; // Placed order in this cycle
         }
       }
     }
@@ -471,6 +573,8 @@ module.exports = {
   runUSAutonomousCycle,
   panicSquareOffUSAll,
   resetUSAgentSandbox,
+  setUSRiskProfile,
+  startUSAutonomousAgent,
   getUSTradeHistory: () => state.tradeHistory,
   getUSActivePositions: () => state.activePositions,
   getUSAccuracyMetrics,

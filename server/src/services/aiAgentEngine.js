@@ -43,30 +43,33 @@ const ROUND_TRIP_BROKERAGE_TAXES = 45.00; // ₹20 entry + ₹20 exit + ₹5 STT
 const RISK_PROFILES = {
   CONSERVATIVE: {
     name: 'CONSERVATIVE',
-    maxConcurrentPositions: 1,
-    baseScoreThreshold: 84,
-    minCashReserveRatio: 0.80,
-    riskPerTradePct: 0.01, // 1%
-    dailyTradeLimit: 3,
-    description: 'High selectivity: max 1 position, strict Score ≥ 84, 80% cash floor.'
+    maxConcurrentPositions: 2,
+    baseScoreThreshold: 80,
+    minCashReserveRatio: 0.75,
+    riskPerTradePct: 0.015, // 1.5%
+    dailyTradeLimit: 5,
+    tradeCooldownMs: 5 * 60 * 1000,
+    description: 'High selectivity: max 2 positions, strict Score ≥ 80, 75% cash floor.'
   },
   BALANCED: {
     name: 'BALANCED',
-    maxConcurrentPositions: 2,
-    baseScoreThreshold: 80,
-    minCashReserveRatio: 0.70,
+    maxConcurrentPositions: 3,
+    baseScoreThreshold: 74,
+    minCashReserveRatio: 0.65,
     riskPerTradePct: 0.02, // 2%
-    dailyTradeLimit: 5,
-    description: 'Optimal balance: max 2 positions, Score ≥ 80, 70% cash floor.'
+    dailyTradeLimit: 8,
+    tradeCooldownMs: 2 * 60 * 1000,
+    description: 'Optimal balance: max 3 positions, Score ≥ 74, 65% cash floor.'
   },
   AGGRESSIVE: {
     name: 'AGGRESSIVE',
-    maxConcurrentPositions: 3,
-    baseScoreThreshold: 76,
-    minCashReserveRatio: 0.60,
-    riskPerTradePct: 0.03, // 3%
-    dailyTradeLimit: 8,
-    description: 'Maximum frequency: max 3 positions, Score ≥ 76, 60% cash floor.'
+    maxConcurrentPositions: 5,
+    baseScoreThreshold: 70, // User requested aggressive threshold ~70
+    minCashReserveRatio: 0.40,
+    riskPerTradePct: 0.035, // 3.5%
+    dailyTradeLimit: 15,
+    tradeCooldownMs: 30 * 1000, // 30s in aggressive mode
+    description: 'High Aggression: Score ≥ 70, max 5 positions, broad multi-horizon coverage across Intraday, Short-Term, Long-Term & F&O.'
   }
 };
 
@@ -311,11 +314,11 @@ function evaluateSetupProbability(stock, horizon, marketRegime = null) {
       target2 = +(optPrem * 2.00).toFixed(2);  // 100% opt T2
       rationale = `High-conviction Bullish Breakout: Buying ${stock.recommendedStrike || 'ATM Call'} for asymmetric upside.`;
 
-      if (price > vwap) score += 14;
-      if (ema9 > ema21) score += 12;
-      if (rsi >= 55) score += 12;
-      if (volumeRatio >= 1.3) score += 8;
-      if (confidence >= 88) score += 9;
+      if (price > vwap) score += 10;
+      if (ema9 > ema21) score += 10;
+      if (rsi >= 52) score += 10;
+      if (volumeRatio >= 1.2) score += 6;
+      if (confidence >= 85) score += 6;
     } else if (action === 'BUY_PUT') {
       isUpward = true; // Option buyer profits as put price rises
       const optPrem = stock.optPremium || +(price * 0.025).toFixed(2);
@@ -324,11 +327,11 @@ function evaluateSetupProbability(stock, horizon, marketRegime = null) {
       target2 = +(optPrem * 2.00).toFixed(2);
       rationale = `High-conviction Bearish Plunge: Buying ${stock.recommendedStrike || 'ATM Put'} to exploit heavy breakdown.`;
 
-      if (price < vwap) score += 14;
-      if (ema9 < ema21) score += 12;
-      if (rsi <= 45) score += 12;
-      if (volumeRatio >= 1.3) score += 8;
-      if (confidence >= 88) score += 9;
+      if (price < vwap) score += 10;
+      if (ema9 < ema21) score += 10;
+      if (rsi <= 48) score += 10;
+      if (volumeRatio >= 1.2) score += 6;
+      if (confidence >= 85) score += 6;
     }
   } else if (horizon === 'SHORT_TERM') {
     action = stock.shortTermSignal || 'HOLD';
@@ -340,8 +343,10 @@ function evaluateSetupProbability(stock, horizon, marketRegime = null) {
       rationale = 'Multi-day swing breakout: 20/50 EMA dynamic bounce with expanding momentum.';
       
       if (price > ema9) score += 10;
-      if (rsi >= 48 && rsi <= 65) score += 10;
+      if (rsi >= 48 && rsi <= 68) score += 10;
       if (confidence >= 80) score += 10;
+      if (volumeRatio >= 1.1) score += 6;
+      if (stock.trend === 'BULLISH') score += 6;
     } else if (action === 'SELL') {
       isUpward = false;
       stopLoss = +(price * 1.018).toFixed(2);
@@ -350,8 +355,24 @@ function evaluateSetupProbability(stock, horizon, marketRegime = null) {
       rationale = 'Multi-day swing breakdown: rejection at overhead resistance with weakening RSI.';
 
       if (price < ema9) score += 10;
-      if (rsi <= 45) score += 10;
+      if (rsi <= 48) score += 10;
       if (confidence >= 80) score += 10;
+      if (volumeRatio >= 1.1) score += 6;
+    }
+  } else if (horizon === 'LONG_TERM') {
+    action = stock.longTermSignal || 'BUY';
+    if (action === 'BUY') {
+      isUpward = true;
+      stopLoss = +(price * 0.90).toFixed(2);
+      target1 = +(price * 1.15).toFixed(2);
+      target2 = +(price * 1.35).toFixed(2);
+      rationale = 'Long-term secular compounding: mega-cap fundamental strength with favorable multi-month valuation.';
+
+      if (stock.trend === 'BULLISH') score += 10;
+      if (rsi >= 35 && rsi <= 68) score += 10;
+      if (price > (stock.sma200 || price * 0.95)) score += 10;
+      if (confidence >= 80) score += 6;
+      if (volumeRatio >= 1.0) score += 6;
     }
   }
 
@@ -413,32 +434,31 @@ function evaluateSetupProbability(stock, horizon, marketRegime = null) {
 }
 
 /**
- * Scan all segments and pick highest profit-probability setups
+ * Scan all segments and pick highest profit-probability setups across diverse horizons
  */
 async function scanMarketOpportunities(quotes = null) {
-  const ist = getISTDateTime();
-  const hours = ist.getHours();
-  const minutes = ist.getMinutes();
-  const day = ist.getDay();
-  const isWeekday = day >= 1 && day <= 5;
-
-  const isNearMarketClose = isWeekday && ((hours === 15 && minutes >= 0) || hours > 15 || hours < 9 || (hours === 9 && minutes < 15));
-
-  const horizons = isNearMarketClose 
-    ? ['F_AND_O', 'SHORT_TERM'] 
-    : ['INTRADAY', 'F_AND_O', 'SHORT_TERM'];
+  // Always include all 4 trading horizons so Intraday, Short-Term, Long-Term and F&O are scanned
+  const horizons = ['INTRADAY', 'SHORT_TERM', 'LONG_TERM', 'F_AND_O'];
 
   const candidates = [];
   const baseThreshold = RISK_PROFILES[state.riskProfile]?.baseScoreThreshold || getBaseScoreThreshold();
   const marketRegime = detectMarketRegime(quotes);
+
+  // Track currently active horizons in open positions to ensure multi-horizon diversity
+  const activeHorizons = (state.activePositions || []).map(p => p.horizon);
 
   for (const horizon of horizons) {
     try {
       const stocks = await getRealMarketUniverse(horizon);
       (stocks || []).forEach(stock => {
         const evalResult = evaluateSetupProbability(stock, horizon, marketRegime);
-        if (['BUY', 'SELL', 'BUY_CALL', 'BUY_PUT'].includes(evalResult.action) && evalResult.score >= (baseThreshold - 2)) {
-          candidates.push(evalResult);
+        if (['BUY', 'SELL', 'BUY_CALL', 'BUY_PUT'].includes(evalResult.action) && evalResult.score >= (baseThreshold - 4)) {
+          // Diversity boost: if this horizon does not have any active position open, give slight priority
+          const horizonBonus = activeHorizons.includes(horizon) ? 0 : 3;
+          candidates.push({
+            ...evalResult,
+            sortScore: evalResult.score + horizonBonus
+          });
         }
       });
     } catch (err) {
@@ -446,7 +466,7 @@ async function scanMarketOpportunities(quotes = null) {
     }
   }
 
-  candidates.sort((a, b) => b.score !== a.score ? b.score - a.score : b.confidence - a.confidence);
+  candidates.sort((a, b) => b.sortScore !== a.sortScore ? b.sortScore - a.sortScore : b.confidence - a.confidence);
   return candidates;
 }
 
@@ -473,21 +493,27 @@ async function executeAutonomousTrade(candidate) {
   const minCashFloor = state.virtualCapital * state.minCashReserveRatio;
   const currentInvested = state.activePositions.reduce((sum, p) => sum + (p.entryPrice * p.quantity), 0);
   const isFO = candidate.horizon === 'F_AND_O';
-  const entryPrice = isFO ? (candidate.stockData.optPremium || +(candidate.price * 0.025).toFixed(2)) : candidate.price;
+  const entryPrice = isFO ? (candidate.stockData?.optPremium || +(candidate.price * 0.025).toFixed(2)) : candidate.price;
   
   const riskPct = RISK_PROFILES[state.riskProfile]?.riskPerTradePct || 0.02;
   const riskAmount = (state.virtualCapital || 100000) * riskPct;
   const slDistance = Math.abs(entryPrice - candidate.stopLoss);
-  let quantity = 50;
+  
+  // Available capital headroom
+  const maxCapitalForTrade = Math.max(2000, (state.virtualCapital - currentInvested) - minCashFloor);
+  let quantity = 10;
 
   if (isFO) {
-    quantity = candidate.stockData.lotSize || 250;
-  } else if (slDistance > 0) {
-    quantity = Math.max(10, Math.min(150, Math.floor(riskAmount / slDistance)));
+    quantity = candidate.stockData?.lotSize || 250;
+  } else {
+    const riskQty = slDistance > 0 ? Math.floor(riskAmount / slDistance) : 20;
+    const capitalQty = entryPrice > 0 ? Math.floor(maxCapitalForTrade / entryPrice) : 20;
+    // Sensible multi-horizon sizing capped by available cash headroom
+    quantity = Math.max(2, Math.min(riskQty, capitalQty, 100));
   }
 
   const tradeCapitalNeeded = entryPrice * quantity;
-  if ((state.virtualCapital - (currentInvested + tradeCapitalNeeded)) < minCashFloor) {
+  if ((state.virtualCapital - (currentInvested + tradeCapitalNeeded)) < (minCashFloor * 0.95)) {
     addDecisionLog('RISK_GUARD', `Capital Guard: Trade requires ₹${tradeCapitalNeeded.toFixed(2)}. Floor reserve (₹${minCashFloor.toFixed(2)}) would be breached.`);
     return null;
   }
@@ -823,6 +849,7 @@ function setRiskProfile(profileName) {
   state.maxConcurrentPositions = profile.maxConcurrentPositions;
   state.dailyTradeLimit = profile.dailyTradeLimit;
   state.minCashReserveRatio = profile.minCashReserveRatio;
+  state.tradeCooldownMs = profile.tradeCooldownMs || (2 * 60 * 1000);
 
   persistState();
 
@@ -949,26 +976,30 @@ async function runAutonomousCycle() {
     checkDailyReset();
 
     const canTrade = state.isAutoPilotActive && 
-      session.isOpen &&
       state.activePositions.length < state.maxConcurrentPositions && 
       state.dailyTradesCount < state.dailyTradeLimit &&
       (Date.now() - state.lastTradeTimestamp >= state.tradeCooldownMs);
 
     if (canTrade) {
       const now = Date.now();
-      if (now - state.lastScanTimestamp > 6000) {
+      if (now - state.lastScanTimestamp > 5000) {
         state.lastScanTimestamp = now;
         const candidates = await scanMarketOpportunities(quotes);
 
         if (candidates && candidates.length > 0) {
-          const bestCandidate = candidates[0];
-          const threshold = RISK_PROFILES[state.riskProfile]?.baseScoreThreshold || getBaseScoreThreshold();
-          if (bestCandidate && bestCandidate.score >= threshold) {
-            await executeAutonomousTrade(bestCandidate);
+          const threshold = RISK_PROFILES[state.riskProfile]?.baseScoreThreshold || 70;
+          // Iterate through diverse multi-horizon candidates
+          for (const cand of candidates) {
+            if (cand.score >= threshold) {
+              const executed = await executeAutonomousTrade(cand);
+              if (executed) {
+                break; // Placed position in this cycle
+              }
+            }
           }
         }
       }
-    } else if (state.isAutoPilotActive && !session.isOpen) {
+    } else if (state.isAutoPilotActive && !session.isOpen && state.activePositions.length >= state.maxConcurrentPositions) {
       // Periodically log standby notice when market is closed (every 20 min)
       const now = Date.now();
       if (now - (state.lastClosedNoticeTimestamp || 0) > 1200000) {
@@ -1040,6 +1071,8 @@ async function resetAgentSandbox() {
 module.exports = {
   startAutonomousAgent,
   runAutonomousCycle,
+  scanMarketOpportunities,
+  executeAutonomousTrade,
   toggleAutoPilot,
   resetAgentSandbox,
   panicSquareOffAll,

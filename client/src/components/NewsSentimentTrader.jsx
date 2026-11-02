@@ -62,7 +62,7 @@ export const NewsSentimentTrader = () => {
 
   useEffect(() => {
     fetchNews();
-  }, []);
+  }, [marketRegion]);
 
   // Analyze custom text entered by user
   const handleAnalyzeCustomText = async (e) => {
@@ -101,7 +101,8 @@ export const NewsSentimentTrader = () => {
         body: JSON.stringify({
           headline: customText.trim(),
           source: 'User Analyst Feed',
-          symbol: customSymbol
+          symbol: customSymbol,
+          market: marketRegion
         })
       });
       const text = await res.text();
@@ -126,7 +127,12 @@ export const NewsSentimentTrader = () => {
     try {
       const res = await authFetch('/api/sentiment/trade', {
         method: 'POST',
-        body: JSON.stringify({ newsId, horizon: tradeHorizon, quantity: 50 })
+        body: JSON.stringify({ 
+          newsId, 
+          horizon: tradeHorizon, 
+          quantity: marketRegion === 'US' ? 10 : 50,
+          market: marketRegion
+        })
       });
       const text = await res.text();
       const data = text ? JSON.parse(text) : null;

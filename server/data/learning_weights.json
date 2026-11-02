@@ -1,23 +1,51 @@
 {
   "modelName": "reinforcement_v1",
-  "totalTradesAnalyzed": 5,
+  "totalTradesAnalyzed": 8,
   "consecutiveWins": 0,
-  "consecutiveLosses": 4,
-  "baseScoreThreshold": 84,
+  "consecutiveLosses": 7,
+  "baseScoreThreshold": 73,
   "learnedAccuracyRate": 100,
   "weights": {
-    "rsiWeight": 12.25,
-    "vwapWeight": 12.3,
+    "rsiWeight": 12,
+    "vwapWeight": 12,
     "emaWeight": 10,
-    "volumeWeight": 10.2,
+    "volumeWeight": 9.5,
     "riskRewardMultiplier": 1
   },
   "segmentMultipliers": {
-    "INTRADAY": 0.83,
+    "INTRADAY": 0.85,
     "F_AND_O": 1,
-    "SHORT_TERM": 1
+    "SHORT_TERM": 1,
+    "LONG_TERM": 1
   },
   "evolutionLogs": [
+    {
+      "timestamp": "2026-11-02T15:58:32.713Z",
+      "tradeId": "pos_1793635112707_sa8ca1",
+      "symbol": "RELIANCE.NS",
+      "outcome": "LOSS",
+      "pnl": -45,
+      "insight": "Loss registered on RELIANCE.NS (Net -₹45.00). Raised entry score threshold to 73 and tightened volume requirements.",
+      "weightAdjustment": "Threshold: 73, VolReq: 9.5, Multiplier (INTRADAY): 0.85"
+    },
+    {
+      "timestamp": "2026-11-02T15:58:32.711Z",
+      "tradeId": "pos_1793635112709_r5t5pb",
+      "symbol": "TCS.NS",
+      "outcome": "LOSS",
+      "pnl": -45,
+      "insight": "Loss registered on TCS.NS (Net -₹45.00). Raised entry score threshold to 72 and tightened volume requirements.",
+      "weightAdjustment": "Threshold: 72, VolReq: 9, Multiplier (INTRADAY): 0.9"
+    },
+    {
+      "timestamp": "2026-11-02T15:43:21.085Z",
+      "tradeId": "auto_1793634201083_3cmlaa",
+      "symbol": "RELIANCE.NS",
+      "outcome": "LOSS",
+      "pnl": -45,
+      "insight": "Loss registered on RELIANCE.NS (Net -₹45.00). Raised entry score threshold to 71 and tightened volume requirements.",
+      "weightAdjustment": "Threshold: 71, VolReq: 8.5, Multiplier (INTRADAY): 0.95"
+    },
     {
       "timestamp": "2026-10-18T09:40:21.065Z",
       "tradeId": "pos_1792316421061_nq23ia",

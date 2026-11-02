@@ -13,15 +13,17 @@ import {
   Zap,
   Info
 } from 'lucide-react';
+import { useMarket } from '../context/MarketContext';
 
 export const MarketSentimentView = () => {
+  const { marketRegion } = useMarket();
   const [sentiment, setSentiment] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const fetchSentiment = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/sentiment/market');
+      const res = await fetch(`/api/sentiment/market?market=${marketRegion}`);
       const text = await res.text();
       const data = text ? JSON.parse(text) : null;
       if (data && data.success) {
@@ -36,7 +38,7 @@ export const MarketSentimentView = () => {
 
   useEffect(() => {
     fetchSentiment();
-  }, []);
+  }, [marketRegion]);
 
   const getMeterColor = (score) => {
     if (score >= 75) return '#10b981'; // Extreme Greed (Emerald)

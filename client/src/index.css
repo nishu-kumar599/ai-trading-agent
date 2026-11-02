@@ -256,6 +256,67 @@ body {
   100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
+/* Robinhood / INDmoney Real-Time Price Flash & Microsecond Animations */
+@keyframes priceFlashGreen {
+  0% {
+    background-color: rgba(16, 185, 129, 0.45);
+    color: #10b981;
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+    transform: scale(1.03);
+  }
+  40% {
+    background-color: rgba(16, 185, 129, 0.22);
+    color: #34d399;
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+    transform: scale(1.0);
+  }
+}
+
+@keyframes priceFlashRed {
+  0% {
+    background-color: rgba(239, 68, 68, 0.45);
+    color: #ef4444;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
+    transform: scale(1.03);
+  }
+  40% {
+    background-color: rgba(239, 68, 68, 0.22);
+    color: #f87171;
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+    transform: scale(1.0);
+  }
+}
+
+.price-flash-up {
+  animation: priceFlashGreen 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 4px;
+  padding: 1px 4px;
+  display: inline-block;
+  transition: all 0.2s ease;
+}
+
+.price-flash-down {
+  animation: priceFlashRed 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 4px;
+  padding: 1px 4px;
+  display: inline-block;
+  transition: all 0.2s ease;
+}
+
+.ticker-micro-pulse {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-feature-settings: 'tnum';
+  font-variant-numeric: tabular-nums;
+}
+
 /* Form Panel */
 .auth-form-panel {
   padding: 44px 40px;

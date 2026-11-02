@@ -984,6 +984,152 @@ export const StrategyCenter = ({ initialHorizon = 'INTRADAY', hideInternalTabs =
           </div>
         )}
       </div>
+
+      {/* Past Purchases & Sales (Closed Trade History) */}
+      <div className="signals-table-card" style={{ marginTop: '24px' }}>
+        <div className="table-header">
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <span style={{
+                background: 'rgba(56, 189, 248, 0.15)',
+                color: '#38bdf8',
+                border: '1px solid rgba(56, 189, 248, 0.35)',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                fontSize: '0.68rem',
+                fontWeight: 700,
+                textTransform: 'uppercase'
+              }}>
+                Persistent Trade Records
+              </span>
+            </div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.3px' }}>
+              Past Purchases & Sales (Closed Trade History)
+            </h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: '2px' }}>
+              Audited purchase and sale records across Intraday, Swing, Long-Term, and F&O. Persists across restarts.
+            </p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{
+              fontSize: '0.8rem',
+              color: '#38bdf8',
+              background: 'rgba(56, 189, 248, 0.12)',
+              border: '1px solid rgba(56, 189, 248, 0.3)',
+              padding: '4px 10px',
+              borderRadius: '6px',
+              fontWeight: 700
+            }}>
+              {tradeHistory.length} Completed Trades
+            </span>
+          </div>
+        </div>
+
+        {tradeHistory.length === 0 ? (
+          <div className="empty-state">
+            <CheckCircle2 size={32} color="var(--accent-emerald)" style={{ marginBottom: '8px' }} />
+            <h4 style={{ color: '#fff', marginBottom: '4px' }}>No Closed Trades Yet</h4>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', maxWidth: '420px', margin: '0 auto' }}>
+              When you or the AI Agent executes a purchase and subsequently closes or takes profit on the stock, the complete historical audit record (entry price, exit price, P&L, timestamps) will appear here permanently.
+            </p>
+          </div>
+        ) : (
+          <div className="table-responsive">
+            <table className="signals-table">
+              <thead>
+                <tr>
+                  <th>Symbol & Segment</th>
+                  <th>Direction</th>
+                  <th>Buy / Entry</th>
+                  <th>Sell / Exit</th>
+                  <th>Quantity</th>
+                  <th>Realized Net P&L</th>
+                  <th>Outcome / Reason</th>
+                  <th>Closed Date & Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tradeHistory.map((trade, idx) => {
+                  const netPL = trade.netRealizedPL !== undefined ? trade.netRealizedPL : (trade.realizedPL || 0);
+                  const isWin = netPL > 0;
+                  const isLoss = netPL < 0;
+                  const plColor = isWin ? 'var(--accent-emerald)' : (isLoss ? 'var(--danger)' : '#94a3b8');
+                  const tradeCur = trade.currency || (trade.market === 'US' || marketRegion === 'US' ? '$' : '₹');
+                  const returnPct = trade.realizedPLPct || (trade.entryPrice > 0 ? ((netPL / (trade.entryPrice * trade.quantity)) * 100).toFixed(2) : 0);
+
+                  return (
+                    <tr key={trade.id || idx}>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span className="symbol-badge" style={{ color: '#fff', fontWeight: 700 }}>
+                            {trade.symbol}
+                          </span>
+                          <span style={{ fontSize: '0.72rem', color: '#38bdf8', fontWeight: 600 }}>
+                            {trade.horizon || 'INTRADAY'}
+                          </span>
+                        </div>
+                      </td>
+                      <td>
+                        <span style={{
+                          background: ['BUY', 'BUY_CALL'].includes(trade.direction) ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                          color: ['BUY', 'BUY_CALL'].includes(trade.direction) ? '#34d399' : '#fda4af',
+                          border: `1px solid ${['BUY', 'BUY_CALL'].includes(trade.direction) ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: 700
+                        }}>
+                          {trade.direction}
+                        </span>
+                      </td>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                        {tradeCur}{Number(trade.entryPrice || 0).toFixed(2)}
+                      </td>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                        {tradeCur}{Number(trade.exitPrice || trade.currentPrice || 0).toFixed(2)}
+                      </td>
+                      <td style={{ fontFamily: 'var(--font-mono)' }}>
+                        {trade.quantity}
+                      </td>
+                      <td>
+                        <div style={{
+                          fontFamily: 'var(--font-mono)',
+                          fontWeight: 800,
+                          color: plColor,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          background: isWin ? 'rgba(16, 185, 129, 0.12)' : (isLoss ? 'rgba(239, 68, 68, 0.12)' : 'rgba(255, 255, 255, 0.05)'),
+                          padding: '4px 10px',
+                          borderRadius: '8px',
+                          width: 'fit-content'
+                        }}>
+                          {isWin ? '+' : ''}{tradeCur}{Number(netPL).toFixed(2)} ({Number(returnPct) >= 0 ? `+${returnPct}%` : `${returnPct}%`})
+                        </div>
+                      </td>
+                      <td>
+                        <span style={{
+                          background: isWin ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.06)',
+                          color: isWin ? '#34d399' : '#cbd5e1',
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: 600
+                        }}>
+                          {trade.outcome === 'WIN' ? 'TARGET_HIT 🎯' : (trade.status || 'CLOSED')}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                        {trade.closedAt ? new Date(trade.closedAt).toLocaleString() : 'Recent'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

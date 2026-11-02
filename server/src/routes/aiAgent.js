@@ -15,7 +15,8 @@ const {
   getUSTradeHistory,
   runUSAutonomousCycle,
   panicSquareOffUSAll,
-  resetUSAgentSandbox
+  resetUSAgentSandbox,
+  setUSRiskProfile
 } = require('../services/usAiAgentEngine');
 const { getLearningStats } = require('../services/aiLearningEngine');
 const { getNotifications, clearNotifications } = require('../services/notificationService');
@@ -157,11 +158,26 @@ router.post('/panic-exit-all', authenticateToken, async (req, res) => {
 // POST /api/ai-agent/risk-profile (Conservative, Balanced, Aggressive)
 router.post('/risk-profile', authenticateToken, (req, res) => {
   try {
-    const { profile } = req.body || {};
+    const { profile, market } = req.body || {};
+    const region = (market || req.query.market || 'IN').toUpperCase();
+
+    if (region === 'US') {
+      const result = setUSRiskProfile(profile);
+      const status = getUSAgentStatus();
+      return res.json({
+        success: true,
+        market: 'US',
+        message: `US Risk Profile successfully updated to ${result.profile}.`,
+        profile: result.details,
+        status
+      });
+    }
+
     const result = setRiskProfile(profile);
     const status = getAgentStatus();
     res.json({
       success: true,
+      market: 'IN',
       message: `Risk Profile successfully updated to ${result.profile}.`,
       profile: result.details,
       status

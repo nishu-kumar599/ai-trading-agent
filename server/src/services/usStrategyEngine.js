@@ -341,15 +341,49 @@ function resetUSTestSandbox(userId = null) {
 module.exports = {
   US_STRATEGY_CATALOG,
   executeUSTrade,
+  executeTrade: executeUSTrade,
   tickUSPosition,
   closeUSPosition,
   resetUSTestSandbox,
   getUSActivePositions: (quotes, userId = null) => {
-    const positions = updateAndGetUSActivePositions(quotes);
-    return userId ? positions.filter(p => !p.userId || p.userId === userId) : positions;
+    const manualPositions = updateAndGetUSActivePositions(quotes);
+    const filteredManual = userId
+      ? manualPositions.filter(p => !p.userId || p.userId === userId)
+      : manualPositions;
+    try {
+      const { getUSActivePositions: getAiPositions } = require('./usAiAgentEngine');
+      const aiPositions = getAiPositions() || [];
+      const map = new Map();
+      filteredManual.forEach(p => map.set(p.id, p));
+      aiPositions.forEach(p => {
+        if (!userId || !p.userId || p.userId === userId) {
+          map.set(p.id, p);
+        }
+      });
+      return Array.from(map.values());
+    } catch (e) {
+      return filteredManual;
+    }
   },
   getUSTradeHistory: (userId = null) => {
-    return userId ? tradeHistory.filter(t => !t.userId || t.userId === userId) : tradeHistory;
+    try {
+      const { getUSTradeHistory: getAiHistory } = require('./usAiAgentEngine');
+      const aiHistory = getAiHistory() || [];
+      const map = new Map();
+      tradeHistory.forEach(t => {
+        if (!userId || !t.userId || t.userId === userId) {
+          map.set(t.id, t);
+        }
+      });
+      aiHistory.forEach(t => {
+        if (!userId || !t.userId || t.userId === userId) {
+          map.set(t.id, t);
+        }
+      });
+      return Array.from(map.values());
+    } catch (e) {
+      return userId ? tradeHistory.filter(t => !t.userId || t.userId === userId) : tradeHistory;
+    }
   }
 };
 

@@ -1,0 +1,17 @@
+{
+  "isAutoPilotActive": true,
+  "riskProfile": "AGGRESSIVE",
+  "maxConcurrentPositions": 5,
+  "dailyTradeLimit": 15,
+  "dailyTradesCount": 0,
+  "lastTradeDate": "2026-11-02",
+  "lastTradeTimestamp": 0,
+  "tradeCooldownMs": 600000,
+  "minCashReserveRatio": 0.4,
+  "virtualCapital": 25000,
+  "allocatedCapital": 0,
+  "lastScanTimestamp": 0,
+  "activePositions": [],
+  "tradeHistory": [],
+  "decisionLogs": []
+}

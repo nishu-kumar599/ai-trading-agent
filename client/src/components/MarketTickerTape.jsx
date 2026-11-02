@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { TrendingUp, TrendingDown, Activity, Wifi } from 'lucide-react';
 import { useMarket } from '../context/MarketContext';
 
 export const MarketTickerTape = ({ onSelectTicker }) => {
   const { marketRegion, currency } = useMarket();
   const [ticks, setTicks] = useState([]);
+  const [flashMap, setFlashMap] = useState({});
+  const prevPriceRef = useRef({});
   const [isLiveStream, setIsLiveStream] = useState(true);
   const [sessionInfo, setSessionInfo] = useState({
     isOpen: true,
@@ -30,10 +32,17 @@ export const MarketTickerTape = ({ onSelectTicker }) => {
         }
 
         const combined = [];
+        const newFlash = {};
         
         // Add indices
         if (data.indices && data.indices.length > 0) {
           data.indices.forEach(idx => {
+            const sym = idx.name;
+            const prev = prevPriceRef.current[sym];
+            if (prev !== undefined && prev !== idx.price) {
+              newFlash[sym] = idx.price > prev ? 'up' : 'down';
+            }
+            prevPriceRef.current[sym] = idx.price;
             combined.push({
               symbol: idx.name,
               price: idx.price,
@@ -48,6 +57,12 @@ export const MarketTickerTape = ({ onSelectTicker }) => {
         // Add top stocks
         if (data.stocks && data.stocks.length > 0) {
           data.stocks.forEach(stk => {
+            const sym = stk.symbol;
+            const prev = prevPriceRef.current[sym];
+            if (prev !== undefined && prev !== stk.price) {
+              newFlash[sym] = stk.price > prev ? 'up' : 'down';
+            }
+            prevPriceRef.current[sym] = stk.price;
             combined.push({
               symbol: stk.symbol,
               price: stk.price,
@@ -59,6 +74,11 @@ export const MarketTickerTape = ({ onSelectTicker }) => {
               rsi: stk.rsi
             });
           });
+        }
+
+        if (Object.keys(newFlash).length > 0) {
+          setFlashMap(prev => ({ ...prev, ...newFlash }));
+          setTimeout(() => setFlashMap({}), 900);
         }
 
         if (combined.length > 0) {
@@ -166,11 +186,15 @@ export const MarketTickerTape = ({ onSelectTicker }) => {
               {item.symbol}
             </span>
 
-            <span style={{
-              fontFamily: 'var(--font-mono)',
-              fontWeight: 700,
-              color: '#fff'
-            }}>
+            <span 
+              className={flashMap[item.symbol] === 'up' ? 'price-flash-up' : (flashMap[item.symbol] === 'down' ? 'price-flash-down' : '')}
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 700,
+                color: '#fff',
+                transition: 'background-color 0.2s ease'
+              }}
+            >
               {currency}{Number(item.price || 0).toLocaleString(marketRegion === 'US' ? 'en-US' : 'en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
 

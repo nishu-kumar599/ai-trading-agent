@@ -231,12 +231,14 @@ app.listen(PORT, '0.0.0.0', async () => {
     console.warn('DB initialization notice:', dbErr.message);
   }
 
-  // Start 24/7 Autonomous AI Trading Sentinel in the background
+  // Start 24/7 Autonomous AI Trading Sentinel in the background (IN & US markets)
   try {
     const { startAutonomousAgent } = require('./services/aiAgentEngine');
+    const { startUSAutonomousAgent } = require('./services/usAiAgentEngine');
     await startAutonomousAgent();
+    startUSAutonomousAgent();
   } catch (err) {
-    console.error('Failed to start Autonomous AI Agent:', err.message);
+    console.error('Failed to start Autonomous AI Agents:', err.message);
   }
 
   // Start Render Self-Keep-Alive Sentinel (pings every 10 min to prevent free tier sleep)

@@ -22,7 +22,7 @@ let learningState = {
   totalTradesAnalyzed: 0,
   consecutiveWins: 0,
   consecutiveLosses: 0,
-  baseScoreThreshold: 80,
+  baseScoreThreshold: 70,
   learnedAccuracyRate: 100,
   weights: {
     rsiWeight: 12.0,
@@ -34,7 +34,8 @@ let learningState = {
   segmentMultipliers: {
     INTRADAY: 1.0,
     F_AND_O: 1.0,
-    SHORT_TERM: 1.0
+    SHORT_TERM: 1.0,
+    LONG_TERM: 1.0
   },
   evolutionLogs: [
     {
